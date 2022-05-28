@@ -56,8 +56,8 @@ escapechars     ([\\"nrt0])
 (\/\/[^\r\n]*[ \r|\n|\r\n]?)        ; // Handle comment
 ({letter}({letter}|{digit})*)       {yylval = NEWSTD_V(std::string, (yytext)); return ID;}
 (0{digit}+)                         error_unprintable_char(*yytext);
-(0|{nozerodigit}{digit}*)           {yylval = {NEW(VarTypeNameC, ("INT"))}; return NUM;}
-(\"([^\n\r\"\\]|\\[rnt"\\])+\")     {yylval = {NEW(VarTypeNameC, ("STRING"))}; return STRING;}
+(0|{nozerodigit}{digit}*)           {yylval = NEWSTD_V(std::string, (yytext)); return NUM;}
+(\"([^\n\r\"\\]|\\[rnt"\\])+\")     {return STRING;}
 
 .                                   return -1;
 %%

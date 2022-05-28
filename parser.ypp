@@ -80,7 +80,7 @@ hw3::SymbolTable symbolTable;
 %%
 /* Rules */
 Program:        Funcs                               {
-                                                    auto mainFunc = GET_FUNC("main");
+                                                    auto mainFunc = symbolTable.getFuncSymbol("main");
                                                     if (mainFunc->getType() != "void" or mainFunc->getArgTypes().size() != 0) {
                                                         errorMainMissing();
                                                     }
@@ -89,7 +89,7 @@ Program:        Funcs                               {
                 ;
 Funcs:          /* Epsilon */                       {}
                 | FuncDecl Funcs                    {};
-FuncDecl:       RetType ID LPAREN Formals           {
+FuncDecl:       RetType ID LPAREN Formals           { // TODO: Add formals to symbol table
                                                     shared_ptr<FuncIdC> funcId(NEW(FuncIdC, (STYPE2STD(string, $2), DC(RetTypeNameC, $1)->getTypeName(), VECS($4))));
                                                     symbolTable.addSymbol(STYPE2STD(string, $2), funcId);
                                                     }
@@ -221,7 +221,12 @@ Exp:            LPAREN Exp RPAREN                   {$$ = $2;}
                 | ID                                {$$ = NEW(ExpC,(GET_SYMTYPE($1)));}
                 | Call                              {$$ = NEW(ExpC,(DC(ExpC, $1)->getType()));}
                 | NUM                               {$$ = NEW(ExpC,("INT"));}
-                | NUM B                             {$$ = NEW(ExpC,("BYTE")); /* TODO: Check upto 256 */}
+                | NUM B                             {
+                                                    if (stoi(STYPE2STD(string, $1)) > 255) {
+                                                        errorByteTooLarge(yylineno, yytext);
+                                                    }
+                                                    $$ = NEW(ExpC,("BYTE"));
+                                                    }
                 | STRING                            {$$ = NEW(ExpC,("STRING"));}
                 | TRUE                              {$$ = NEW(ExpC,("BOOL"));}
                 | FALSE                             {$$ = NEW(ExpC,("BOOL"));}
