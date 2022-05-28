@@ -3,6 +3,8 @@
 
 #include <vector>
 #include <string>
+#include "tokens.hpp"
+
 using namespace std;
 
 namespace output{
@@ -27,5 +29,7 @@ namespace output{
     void errorByteTooLarge(int lineno, const string& value);
 
 }
+ 
+int yyerror(const char * message);
 
 #endif
