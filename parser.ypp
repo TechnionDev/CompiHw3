@@ -2,32 +2,48 @@
 // C user declarations
 #include <iostream>
 #include <string>
-#include "output.hpp"
+#include "hw3_output.hpp"
 #include "tokens.hpp"
+#include "stypes.hpp"
 
-using std::cout;
-using std::endl;
-using std::cin;
-using std::cerr;
+namespace yy {
 using namespace output;
+using namespace hw3;
+using namespace std;
+}
+using namespace output;
+using namespace hw3;
+using namespace std;
 
-SymbolTable symbolTable;
+hw3::SymbolTable symbolTable;
 
 %}
-%union {
-    ExpC *exp;
-    VarTypeNameC *varTypeName;
-    RetTypeNameC *retType;
-    vector<string> *idList;
-    IdC *id;
+
+%code requires {
+   #include "stypes.hpp"
 }
+
+/* %define api.prefix {hw3} */
+
+/* %union {
+    std::shared_ptr<hw3::ExpC> exp;
+    std::shared_ptr<hw3::VarTypeNameC> varTypeName;
+    std::shared_ptr<hw3::RetTypeNameC> retType;
+    std::shared_ptr<std::vector<std::string> > idList;
+    std::shared_ptr<std::vector<std::string> > typeList;
+    std::shared_ptr<hw3::IdC> id;
+    std::shared_ptr<hw3::StringC> idName;
+} */
 
 /* Declarations */
 %nonassoc VOID
-%nonassoc <exp> INT
-%nonassoc <exp> BYTE
+%nonassoc INT
+%nonassoc BYTE
+/* %nonassoc <exp> INT
+%nonassoc <exp> BYTE */
 %nonassoc B
-%nonassoc <exp> BOOL
+%nonassoc BOOL
+/* %nonassoc <exp> BOOL */
 %nonassoc AUTO
 %nonassoc TRUE
 %nonassoc FALSE
@@ -39,6 +55,7 @@ SymbolTable symbolTable;
 %nonassoc CONTINUE
 %nonassoc SC
 %nonassoc COMMENT
+/* %nonassoc <operator*()> ID */
 %nonassoc ID
 %nonassoc NUM
 %nonassoc STRING
@@ -56,20 +73,32 @@ SymbolTable symbolTable;
 %left RPAREN
 %left LBRACE
 %left RBRACE
-%type <exp> Exp
+/* %type <operator*()> Exp
+%type <operator*()> Type;
+%type <operator*()> RetType;
+%type <operator*()> Formals;
+%type <operator*()> FormalDecl;
+%type <operator*()> TypeDecl;
+%type <operator*()> FormalsList;
+%type <operator*()> Call;
+%type <operator*()> ExpList; */
+/* %type <exp> Exp
 %type <varTypeName> Type;
 %type <retType> RetType;
 %type <idList> Formals;
 %type <id> FormalDecl;
 %type <id> TypeDecl;
 %type <idList> FormalsList;
+%type <retType> Call;
+%type <typeList> ExpList; */
 
 %%
 /* Rules */
-Program:        Funcs                               {output::printProductionRule(1);};
+Program:        Funcs                               { /* TODO: Do something here */ };
 Funcs:          /* Epsilon */                       {}
                 | FuncDecl Funcs                    {};
-FuncDecl:       RetType ID LPAREN Formals           {FuncIdC *funcId = new FuncIdC($2->getTypeName(), $1, $4);
+FuncDecl:       RetType ID LPAREN Formals           {
+                                                    shared_ptr<FuncIdC> funcId(new FuncIdC(STYPE_TO_STR($2), STYPE_TO_STR($1), $4));
                                                     symbolTable.addFunc($2, funcId);}
                                     RPAREN LBRACE 
                                                     {symbolTable.addScope();} 
@@ -77,7 +106,7 @@ FuncDecl:       RetType ID LPAREN Formals           {FuncIdC *funcId = new FuncI
                                                     {symbolTable.popScope();}
 ;
 RetType:        Type                                {$$ = $1;}
-                | VOID                              {$$ = new RetTypeNameC("VOID");}
+                | VOID                              {$$ = NEW(RetTypeNameC,("VOID"));}
                 ;
 Formals:        /* Epsilon */                       {$$ = new vector<string>();}
                 | FormalsList                       {$$ = $1;}
@@ -95,27 +124,55 @@ Statements:     Statement                           {}
                 ;
 Statement:      LBRACE {symbolTable.addScope();} Statements RBRACE {symbolTable.popScope();}
                 | TypeDecl SC                       {}
-                | TypeDecl ASSIGN Exp SC            {}
+                | TypeDecl ASSIGN Exp SC            {if ($1->getType() != $3->getType()) {
+                                                        errorMismatch(yylineno);
+                                                    }}
                 | AUTO ID ASSIGN Exp SC             {symbolTable.addSymbol($2, new IdC($2, $4->getType()));}
-                | ID ASSIGN Exp SC                  {}
+                | ID ASSIGN Exp SC                  {if (symbolTable.getSymbol($1)->getType() != $3->getType()) {
+                                                        errorMismatch(yylineno);
+                                                    }}
                 | Call SC                           {}
-                | RETURN SC                         {}
-                | RETURN Exp SC                     {}
+                | RETURN SC                         { /* TODO: Check return type matches */ }
+                | RETURN Exp SC                     { /* TODO: Check return type matches */ }
                 | IF LPAREN Exp RPAREN Statement  %prec IF  {}
                 | IF LPAREN Exp RPAREN Statement ELSE Statement {}
                 | WHILE LPAREN Exp RPAREN Statement {}
-                | BREAK SC                          {}
-                | CONTINUE SC                       {}
+                | BREAK SC                          { /* TODO: Check we're inside a while */ }
+                | CONTINUE SC                       { /* TODO: Check we're inside a while */ }
                 ;
 TypeDecl:       Type ID                             {IdC *symbol = new IdC($2, $1.getTypeName());
                                                     symbolTable.addSymbol($2, symbol);
                                                     $$ = symbol;}
                 ;
-Call:           ID LPAREN ExpList RPAREN            {}
-                | ID LPAREN RPAREN                  {$$ = symbolTable.getSymbol($1);}
+Call:           ID LPAREN ExpList RPAREN            {IdC *symbol = symbolTable.getSymbol($1);
+                                                    FuncIdC *funcId = dynamic_cast<FuncIdC*>(symbol);
+                                                    if (funcId == nullptr) {
+                                                        errorUndefFunc(yylineno);
+                                                    } else if (funcId->getFormals()->size() != $3->size()) {
+                                                        errorPrototypeMismatch(yylineno, funcId->getName(), funcId->getArgTypes());
+                                                    } else {
+                                                        for (int i = 0; i < $3->size(); i++) {
+                                                            if (funcId->getArgTypes()[i] != $3 [i]->getType()) {
+                                                                errorPrototypeMismatch(yylineno, funcId->getName(), funcId->getArgTypes());
+                                                                // TODO: Exit
+                                                            }
+                                                        }
+                                                        $$ = new RetTypeName(funcId->getType());
+                                                    }}
+                | ID LPAREN RPAREN                  {IdC *symbol = symbolTable.getSymbol($1);
+                                                    FuncIdC *funcId = dynamic_cast<FuncIdC*>(symbol);
+                                                    if (funcId == nullptr) {
+                                                        errorUndefFunc(yylineno);
+                                                    } else if (funcId->getArgTypes().size() != 0) {
+                                                        errorPrototypeMismatch(yylineno, funcId->getName(), funcId->getArgTypes());
+                                                    } else {
+                                                        $$ = new RetTypeName(funcId->getType());
+                                                    }}
                 ;
-ExpList:        Exp                                 {}
-                | Exp COMMA ExpList                 {}
+ExpList:        Exp                                 {$$ = new vector<string>();
+                                                    $$->push_back($1->getType());}
+                | Exp COMMA ExpList                 {$3->push_back($1->getType());
+                                                    $$ = $3;}
                 ;
 Type:           INT                                 {$$ = new VarTypeNameC("INT");}
                 | BYTE                              {$$ = new VarTypeNameC("BYTE");}
@@ -136,7 +193,7 @@ Exp:            LPAREN Exp RPAREN                   {$$ = $2;}
                                                     } else /* Both are bytes */ {
                                                         $$ = new ExpC("BYTE");
                                                     }}
-                | ID                                {$$ = symbolTable.getSymbol($1); /* IdC inherits from ExpC */}
+                | ID                                {$$ = new ExpC(symbolTable.getSymbol($1)->getType());}
                 | Call                              {$$ = new ExpC($1->getType());}
                 | NUM                               {$$ = new ExpC("INT");}
                 | NUM B                             {$$ = new ExpC("BYTE");}
@@ -148,7 +205,7 @@ Exp:            LPAREN Exp RPAREN                   {$$ = $2;}
                 | Exp OR Exp                        {if (not $1->isBool() or not $3->isBool()) {errorMismatch(yylineno);} $$ = new ExpC("BOOL");}
                 | Exp RELOP Exp                     {if (not $1->isInt() or not $3->isInt()) {errorMismatch(yylineno);} $$ = new ExpC("BOOL");}
                 | Exp EQOP Exp                      {if (not $1->isInt() or not $3->isInt()) {errorMismatch(yylineno);} $$ = new ExpC("BOOL");}
-                | LPAREN Type RPAREN Exp            {output::printProductionRule(47);}
+                | LPAREN Type RPAREN Exp            { /* TODO: Which casts are allowed */ }
                 ;
 %%
 
