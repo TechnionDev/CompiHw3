@@ -11,13 +11,23 @@ using std::cin;
 using std::cerr;
 using namespace output;
 
+SymbolTable symbolTable;
+
 %}
+%union {
+    ExpC *exp;
+    VarTypeNameC *varTypeName;
+    RetTypeNameC *retType;
+    vector<string> *idList;
+    IdC *id;
+}
+
 /* Declarations */
 %nonassoc VOID
-%nonassoc INT
-%nonassoc BYTE
+%nonassoc <exp> INT
+%nonassoc <exp> BYTE
 %nonassoc B
-%nonassoc BOOL
+%nonassoc <exp> BOOL
 %nonassoc AUTO
 %nonassoc TRUE
 %nonassoc FALSE
@@ -46,70 +56,102 @@ using namespace output;
 %left RPAREN
 %left LBRACE
 %left RBRACE
+%type <exp> Exp
+%type <varTypeName> Type;
+%type <retType> RetType;
+%type <idList> Formals;
+%type <id> FormalDecl;
+%type <id> TypeDecl;
+%type <idList> FormalsList;
 
 %%
 /* Rules */
 Program:        Funcs                               {output::printProductionRule(1);};
-Funcs:          /* Epsilon */                       {output::printProductionRule(2);}
-                | FuncDecl Funcs                    {output::printProductionRule(3);};
-FuncDecl:       RetType ID LPAREN Formals RPAREN LBRACE Statements RBRACE {output::printProductionRule(4);}
+Funcs:          /* Epsilon */                       {}
+                | FuncDecl Funcs                    {};
+FuncDecl:       RetType ID LPAREN Formals           {FuncIdC *funcId = new FuncIdC($2->getTypeName(), $1, $4);
+                                                    symbolTable.addFunc($2, funcId);}
+                                    RPAREN LBRACE 
+                                                    {symbolTable.addScope();} 
+                                    Statements RBRACE 
+                                                    {symbolTable.popScope();}
 ;
-RetType:        Type                                {output::printProductionRule(5);}
-                | VOID                              {output::printProductionRule(6);}
+RetType:        Type                                {$$ = $1;}
+                | VOID                              {$$ = new RetTypeNameC("VOID");}
                 ;
-Formals:        /* Epsilon */                       {output::printProductionRule(7);}
-                | FormalsList                       {output::printProductionRule(8);}
+Formals:        /* Epsilon */                       {$$ = new vector<string>();}
+                | FormalsList                       {$$ = $1;}
 ;
-FormalsList:    FormalDecl                          {output::printProductionRule(9);}
-                | FormalDecl COMMA FormalsList      {output::printProductionRule(10);}
+FormalsList:    FormalDecl                          {auto vec = new vector<string>();
+                                                    vec->push_back($1->getType());
+                                                    $$ = vec;}
+                | FormalDecl COMMA FormalsList      {$3->push_back($1->getType());
+                                                    $$ = $3;}
                 ;
-FormalDecl:     Type ID                             {output::printProductionRule(11);}
-;
-Statements:     Statement                           {output::printProductionRule(12);}
-                | Statements Statement              {output::printProductionRule(13);}
+FormalDecl:     TypeDecl                            {$$ = $1;}
                 ;
-Statement:      LBRACE Statements RBRACE            {output::printProductionRule(14);}
-                | Type ID SC                        {output::printProductionRule(15);}
-                | Type ID ASSIGN Exp SC             {output::printProductionRule(16);}
-                | AUTO ID ASSIGN Exp SC             {output::printProductionRule(17);}
-                | ID ASSIGN Exp SC                  {output::printProductionRule(18);}
-                | Call SC                           {output::printProductionRule(19);}
-                | RETURN SC                         {output::printProductionRule(20);}
-                | RETURN Exp SC                     {output::printProductionRule(21);}
-                | IF LPAREN Exp RPAREN Statement  %prec IF  {output::printProductionRule(22);}
-                | IF LPAREN Exp RPAREN Statement ELSE Statement {output::printProductionRule(23);}
-                | WHILE LPAREN Exp RPAREN Statement {output::printProductionRule(24);}
-                | BREAK SC                          {output::printProductionRule(25);}
-                | CONTINUE SC                       {output::printProductionRule(26);}
+Statements:     Statement                           {}
+                | Statements Statement              {}
                 ;
-Call:           ID LPAREN ExpList RPAREN            {output::printProductionRule(27);}
-                | ID LPAREN RPAREN                  {output::printProductionRule(28);}
+Statement:      LBRACE {symbolTable.addScope();} Statements RBRACE {symbolTable.popScope();}
+                | TypeDecl SC                       {}
+                | TypeDecl ASSIGN Exp SC            {}
+                | AUTO ID ASSIGN Exp SC             {symbolTable.addSymbol($2, new IdC($2, $4->getType()));}
+                | ID ASSIGN Exp SC                  {}
+                | Call SC                           {}
+                | RETURN SC                         {}
+                | RETURN Exp SC                     {}
+                | IF LPAREN Exp RPAREN Statement  %prec IF  {}
+                | IF LPAREN Exp RPAREN Statement ELSE Statement {}
+                | WHILE LPAREN Exp RPAREN Statement {}
+                | BREAK SC                          {}
+                | CONTINUE SC                       {}
                 ;
-ExpList:        Exp                                 {output::printProductionRule(29);}
-                | Exp COMMA ExpList                 {output::printProductionRule(30);}
+TypeDecl:       Type ID                             {IdC *symbol = new IdC($2, $1.getTypeName());
+                                                    symbolTable.addSymbol($2, symbol);
+                                                    $$ = symbol;}
+                ;
+Call:           ID LPAREN ExpList RPAREN            {}
+                | ID LPAREN RPAREN                  {$$ = symbolTable.getSymbol($1);}
+                ;
+ExpList:        Exp                                 {}
+                | Exp COMMA ExpList                 {}
                 ;
 Type:           INT                                 {$$ = new VarTypeNameC("INT");}
                 | BYTE                              {$$ = new VarTypeNameC("BYTE");}
                 | BOOL                              {$$ = new VarTypeNameC("BOOL");}
                 ;
-Exp:            LPAREN Exp RPAREN                   {output::printProductionRule(34);}
-                | Exp PLUSOP Exp                    {output::printProductionRule(35);}
-                | Exp MULTOP Exp                    {output::printProductionRule(35);}
-                | ID                                {$$ = $1}
-                | Call                              {output::printProductionRule(37);}
-                | NUM                               {$$ = $1;}
-                | NUM B                             {$$ = ((IntC *) $1)->toByteC();}
-                | STRING                            {$$ = $1;}
-                | TRUE                              {output::printProductionRule(41);}
-                | FALSE                             {output::printProductionRule(42);}
-                | NOT Exp                           {output::printProductionRule(43);}
-                | Exp AND Exp                       {output::printProductionRule(44);}
-                | Exp OR Exp                        {output::printProductionRule(45);}
-                | Exp RELOP Exp                     {output::printProductionRule(46);}
-                | Exp EQOP Exp                      {output::printProductionRule(46);}
+Exp:            LPAREN Exp RPAREN                   {$$ = $2;}
+                | Exp PLUSOP Exp                    { if (not ($1->isInt() or $1->isByte()) and not ($3->isInt() or $3->isByte())) {
+                                                        errorMismatch(yylineno);
+                                                    } else if ($1->isInt() or $3->isInt()) {
+                                                        $$ = new ExpC("INT");
+                                                    } else /* Both are bytes */ {
+                                                        $$ = new ExpC("BYTE");
+                                                    }}
+                | Exp MULTOP Exp                    { if (not ($1->isInt() or $1->isByte()) and not ($3->isInt() or $3->isByte())) {
+                                                        errorMismatch(yylineno);
+                                                    } else if ($1->isInt() or $3->isInt()) {
+                                                        $$ = new ExpC("INT");
+                                                    } else /* Both are bytes */ {
+                                                        $$ = new ExpC("BYTE");
+                                                    }}
+                | ID                                {$$ = symbolTable.getSymbol($1); /* IdC inherits from ExpC */}
+                | Call                              {$$ = new ExpC($1->getType());}
+                | NUM                               {$$ = new ExpC("INT");}
+                | NUM B                             {$$ = new ExpC("BYTE");}
+                | STRING                            {$$ = new ExpC("STRING");}
+                | TRUE                              {$$ = new ExpC("BOOL");}
+                | FALSE                             {$$ = new ExpC("BOOL");}
+                | NOT Exp                           {if (not $2->isBool()) {errorMismatch(yylineno);} $$ = new ExpC("BOOL");}
+                | Exp AND Exp                       {if (not $1->isBool() or not $3->isBool()) {errorMismatch(yylineno);} $$ = new ExpC("BOOL");}
+                | Exp OR Exp                        {if (not $1->isBool() or not $3->isBool()) {errorMismatch(yylineno);} $$ = new ExpC("BOOL");}
+                | Exp RELOP Exp                     {if (not $1->isInt() or not $3->isInt()) {errorMismatch(yylineno);} $$ = new ExpC("BOOL");}
+                | Exp EQOP Exp                      {if (not $1->isInt() or not $3->isInt()) {errorMismatch(yylineno);} $$ = new ExpC("BOOL");}
                 | LPAREN Type RPAREN Exp            {output::printProductionRule(47);}
                 ;
 %%
+
 
 /* User routines */
 int main() {

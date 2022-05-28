@@ -13,68 +13,97 @@ using std::string;
 using std::vector;
 
 namespace hw3 {
+typedef enum {
+    STStatements,
+    STStatement,
+    STExpression,
+    STId,
+    STCall
+} SymbolType;
+
+const string &verifyAllTypeNames(const string &type);
+const string &verifyValTypeName(const string &type);
+const string &verifyRetTypeName(const string &type);
+const string &verifyVarTypeName(const string &type);
 
 class STypeC {
-};
-typedef shared_ptr<STypeC *> STypePtr;
+    SymbolType symType;
 
-class VarTypeNameC {
+   public:
+    STypeC(SymbolType symType);
+};
+typedef shared_ptr<STypeC> STypePtr;
+
+class RetTypeNameC : public STypeC {
     string type;
+
+   public:
+    const string &getTypeName() const;
+    RetTypeNameC(const string &type);
+};
+
+class VarTypeNameC : public RetTypeNameC {
+   public:
+    VarTypeNameC(const string &type);
 };
 
 class ExpC {
+    string type;
 
-};
-
-class ValueC {
+   public:
+    ExpC(const string &type);
+    const string &getType() const;
+    bool isInt() const;
+    bool isBool() const;
+    bool isString() const;
+    bool isByte() const;
 };
 
 class IdC : public STypeC {
     string name;
+    string type;
 
    public:
-    IdC(const string &varName);
+    IdC(const string &varName, const string &type);
+    const string &getName() const;
+    virtual const string &getType() const;
 };
 
-class StringC : public ValueC {
-    string value;
+class FuncIdC : public IdC {
+    vector<string> argTypes;
+    string retType;
 
    public:
-    StringC(const string &value);
-};
-
-class ByteC : public ValueC {
-    char value;
-
-   public:
-    ByteC(const char &value);
-};
-
-class BoolC : public ValueC {
-    bool value;
-
-   public:
-    BoolC(const bool &value);
-};
-
-class IntC : public ValueC {
-    int value;
-
-   public:
-    IntC(const int &value);
+    FuncIdC(const string &name, const string &type, const vector<string> &argTypes);
+    const vector<string> &getArgTypes() const;
+    const string &getType() const;
 };
 
 class SymbolTable {
-    map<string, STypePtr > symTbl;
-    vector<set<string> > scopeSymbols;
+    map<string, IdC *> symTbl;
+    vector<int> scopeStartOffsets;
+    vector<vector<string> > scopeSymbols;
+    int currOffset;
 
    public:
+    SymbolTable();
     void addScope();
     void removeScope();
-    void addSymbol(string name, STypePtr type);
+    void addSymbol(string name, IdC *type);
     STypePtr getSymbol(string name);
     void printSymbolTable();
 };
+
+class CallC : public STypeC {
+    string type;
+    string symbol;
+
+   public:
+    CallC(const string &type, const string &symbol);
+    const string &getType() const;
+};
 }  // namespace hw3
+
+#define YYSTYPE StypePtr
 
 #endif
