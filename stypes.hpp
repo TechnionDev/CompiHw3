@@ -18,7 +18,8 @@ typedef enum {
     STStatement,
     STExpression,
     STId,
-    STCall
+    STCall,
+    STString
 } SymbolType;
 
 const string &verifyAllTypeNames(const string &type);
@@ -32,7 +33,9 @@ class STypeC {
    public:
     STypeC(SymbolType symType);
 };
+// TODO: 
 typedef shared_ptr<STypeC> STypePtr;
+// typedef STypeC *STypePtr;
 
 class RetTypeNameC : public STypeC {
     string type;
@@ -47,7 +50,7 @@ class VarTypeNameC : public RetTypeNameC {
     VarTypeNameC(const string &type);
 };
 
-class ExpC {
+class ExpC : public STypeC {
     string type;
 
    public:
@@ -90,7 +93,7 @@ class SymbolTable {
     void addScope();
     void removeScope();
     void addSymbol(string name, IdC *type);
-    STypePtr getSymbol(string name);
+    IdC *getSymbol(const string &name);
     void printSymbolTable();
 };
 
@@ -102,8 +105,20 @@ class CallC : public STypeC {
     CallC(const string &type, const string &symbol);
     const string &getType() const;
 };
+
+class StringC : public STypeC {
+    string value;
+
+   public:
+    StringC(const char *str);
+    const string& getString() const;
+};
+
+
+
 }  // namespace hw3
 
-#define YYSTYPE StypePtr
-
+#define YYSTYPE hw3::STypePtr
+#define NEW(x, y) (std::shared_ptr<hw3::x>(new hw3::x(y)))
+#define STYPE_TO_STR(x) (dynamic_pointer_cast<StringC>(x)->getString())
 #endif

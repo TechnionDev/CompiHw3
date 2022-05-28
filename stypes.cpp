@@ -88,10 +88,14 @@ const string &FuncIdC::getType() const {
     return this->retType;
 }
 
+const vector<string> &FuncIdC::getArgTypes() const {
+    return this->argTypes;
+}
+
 SymbolTable::SymbolTable() {
     this->addScope();
-    this->addSymbol("print", new IdC("print", "STRING"));
-    this->addSymbol("print", new IdC("printi", "int"));
+    this->addSymbol("print", NEW(IdC, ("print", "STRING")));
+    this->addSymbol("print", NEW(IdC, ("printi", "int")));
 }
 
 void SymbolTable::addScope() {
@@ -105,7 +109,7 @@ void SymbolTable::removeScope() {
     int offset = this->scopeStartOffsets.back();
     this->currOffset -= this->scopeSymbols.size();
     for (string s : this->scopeSymbols.back()) {
-        printID(s, offset++, this->symTbl[s]->type);
+        printID(s, offset++, this->symTbl[s]->getType());
         this->symTbl.erase(s);
     }
 
@@ -113,9 +117,10 @@ void SymbolTable::removeScope() {
     scopeStartOffsets.pop_back();
 }
 
-void SymbolTable::addSymbol(string name, IdC *type) {
+void SymbolTable::addSymbol(string name, shared_ptr<IdC> type) {
     // Check that the symbol doesn't exist in the scope yet
     if (this->scopeSymbols.back().find(name) != this->scopeSymbols.back().end()) {
+        // TODO: errorDef
         throw "Symbol already exists in current scope";
     }
     this->scopeSymbols.back().push_back(name);
@@ -123,11 +128,26 @@ void SymbolTable::addSymbol(string name, IdC *type) {
     this->currOffset++;
 }
 
+IdC *SymbolTable::getSymbol(const string &name) {
+    // Check that the symbol exists in the symbol table
+    if (this->symTbl[name] == nullptr) {
+        // TODO: errorUndef
+        throw "Symbol does not exist in symbol table";
+    }
+    return this->symTbl[name];
+}
+
 void SymbolTable::printSymbolTable() {
     int offset = 0;
     for (auto it = this->symTbl.begin(); it != this->symTbl.end(); ++it) {
         printID(it->first, offset++, it->second->getTypeName());
     }
+}
+
+StringC::StringC(const char *str) : STypeC(STString), value(str) {}
+
+const string &StringC::getString() const {
+    return this->value;
 }
 
 }  // namespace hw3

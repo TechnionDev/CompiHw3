@@ -1,8 +1,8 @@
 %{
     #include <stdlib.h>
     #include <stdio.h>
-    #include "parser.tab.hpp"
     #include "stypes.hpp"
+    #include "parser.tab.hpp"
     using namespace hw3;
 
     char current_str[1025];
@@ -54,10 +54,10 @@ escapechars     ([\\"nrt0])
 ((\+)|(\-))                         return PLUSOP;
 ((\*)|(\/))                         return MULTOP;
 (\/\/[^\r\n]*[ \r|\n|\r\n]?)        ; // Handle comment
-({letter}({letter}|{digit})*)       {yylval = yytext; return ID;}
+({letter}({letter}|{digit})*)       {yylval = NEW(StringC, (yytext)); return ID;}
 (0{digit}+)                         error_unprintable_char(*yytext);
-(0|{nozerodigit}{digit}*)           {yylval = new IntC(atoi(yytext)); return NUM;}
-(\"([^\n\r\"\\]|\\[rnt"\\])+\")     {yylval = new StringC(yytext); return STRING;}
+(0|{nozerodigit}{digit}*)           {yylval = {NEW(VarTypeNameC, ("INT"))}; return NUM;}
+(\"([^\n\r\"\\]|\\[rnt"\\])+\")     {yylval = {NEW(VarTypeNameC, ("STRING"))}; return STRING;}
 
 .                                   return -1;
 %%
