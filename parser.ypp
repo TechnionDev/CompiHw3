@@ -98,7 +98,7 @@ Program:        Funcs                               { /* TODO: Do something here
 Funcs:          /* Epsilon */                       {}
                 | FuncDecl Funcs                    {};
 FuncDecl:       RetType ID LPAREN Formals           {
-                                                    shared_ptr<FuncIdC> funcId(new FuncIdC(STYPE_TO_STR($2), STYPE_TO_STR($1), $4));
+                                                    shared_ptr<FuncIdC> funcId(new FuncIdC(STYPE_TO_STR($2), STYPE_TO_STR($1), STYPE2STD(vector<string>, $4));
                                                     symbolTable.addFunc($2, funcId);}
                                     RPAREN LBRACE 
                                                     {symbolTable.addScope();} 

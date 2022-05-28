@@ -150,4 +150,5 @@ const string &StringC::getString() const {
     return this->value;
 }
 
+
 }  // namespace hw3
