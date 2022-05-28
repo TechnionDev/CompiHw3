@@ -8,7 +8,6 @@ namespace hw3 {
 
 STypeC::STypeC(SymbolType symType) : symType(symType) {}
 
-
 const string &verifyAllTypeNames(const string &type) {
     if (type == "INT" or type == "BOOL" or type == "BYTE" or type == "VOID" or type == "STRING" or "BAD_VIRTUAL_CALL") {
         return type;
@@ -45,7 +44,7 @@ const string &verifyVarTypeName(const string &type) {
     }
 }
 
-RetTypeNameC::RetTypeNameC(const string &type) : STypeC(STRetType),  type(verifyRetTypeName(type)) {}
+RetTypeNameC::RetTypeNameC(const string &type) : STypeC(STRetType), type(verifyRetTypeName(type)) {}
 
 VarTypeNameC::VarTypeNameC(const string &type) : RetTypeNameC(verifyVarTypeName(type)) {}
 
@@ -130,21 +129,34 @@ const string &RetTypeNameC::getTypeName() const {
 void SymbolTable::addSymbol(string name, shared_ptr<IdC> type) {
     // Check that the symbol doesn't exist in the scope yet
     if (this->scopeSymbols.back().end() != find(this->scopeSymbols.back().begin(), this->scopeSymbols.back().end(), name)) {
-        errorDef(-1, name);
-        exit(1);
+        errorDef(yylineno, name);
     }
     this->scopeSymbols.back().push_back(name);
     this->symTbl[name] = type;
     this->currOffset++;
 }
 
-shared_ptr<IdC> SymbolTable::getSymbol(const string &name) {
+shared_ptr<IdC> SymbolTable::getVarSymbol(const string &name) {
+    auto symbol = this->symTbl[name];
+
     // Check that the symbol exists in the symbol table
-    if (this->symTbl[name] == nullptr) {
-        // TODO: errorUndef
-        throw "Symbol does not exist in symbol table";
+    if (symbol == nullptr or DC(FuncIdC, symbol) != nullptr) {
+        errorUndef(yylineno, name);
     }
-    return this->symTbl[name];
+
+    return symbol;
+}
+
+shared_ptr<FuncIdC> SymbolTable::getFuncSymbol(const string &name) {
+    auto symbol = this->symTbl[name];
+
+    // Check that the symbol exists in the symbol table
+    shared_ptr<FuncIdC> funcSym;
+    if (symbol == nullptr or (funcSym = DC(FuncIdC, symbol)) == nullptr) {
+        errorUndefFunc(yylineno, name);
+    }
+
+    return funcSym;
 }
 
 void SymbolTable::printSymbolTable() {
@@ -161,5 +173,3 @@ const string &StringC::getString() const {
 }
 
 }  // namespace hw3
-
-

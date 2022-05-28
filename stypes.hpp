@@ -36,9 +36,8 @@ class STypeC {
     STypeC(SymbolType symType);
     virtual ~STypeC() = default;
 };
-// TODO:
+
 typedef shared_ptr<STypeC> STypePtr;
-// typedef STypeC *STypePtr;
 
 class RetTypeNameC : public STypeC {
     string type;
@@ -99,7 +98,8 @@ class SymbolTable {
     void addScope();
     void removeScope();
     void addSymbol(string name, shared_ptr<IdC> type);
-    shared_ptr<IdC> getSymbol(const string &name);
+    shared_ptr<IdC> getVarSymbol(const string &name);
+    shared_ptr<FuncIdC> getFuncSymbol(const string &name);
     void printSymbolTable();
 };
 
