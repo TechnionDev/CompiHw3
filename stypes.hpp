@@ -34,7 +34,7 @@ class STypeC {
    public:
     STypeC(SymbolType symType);
 };
-// TODO: 
+// TODO:
 typedef shared_ptr<STypeC> STypePtr;
 // typedef STypeC *STypePtr;
 
@@ -80,11 +80,12 @@ class FuncIdC : public IdC {
    public:
     FuncIdC(const string &name, const string &type, const vector<string> &argTypes);
     const vector<string> &getArgTypes() const;
+    vector<string> &getArgTypes();
     const string &getType() const;
 };
 
 class SymbolTable {
-    map<string, IdC *> symTbl;
+    map<string, shared_ptr<IdC> > symTbl;
     vector<int> scopeStartOffsets;
     vector<vector<string> > scopeSymbols;
     int currOffset;
@@ -93,8 +94,8 @@ class SymbolTable {
     SymbolTable();
     void addScope();
     void removeScope();
-    void addSymbol(string name, IdC *type);
-    IdC *getSymbol(const string &name);
+    void addSymbol(string name, shared_ptr<IdC> type);
+    shared_ptr<IdC> getSymbol(const string &name);
     void printSymbolTable();
 };
 
@@ -112,7 +113,7 @@ class StringC : public STypeC {
 
    public:
     StringC(const char *str);
-    const string& getString() const;
+    const string &getString() const;
 };
 
 template <typename T>
@@ -120,16 +121,22 @@ class StdType : public STypeC {
     T value;
 
    public:
-    StdType(T value): STypeC(STStd), value(value) {};
-    const T& getValue() const { return value; };
+    StdType(T value) : STypeC(STStd), value(value){};
+    const T &getValue() const { return value; };
+    T &getValue() { return value; };
+    // const T &operator()() const { return value; };
+    // T &operator()() { return value; };
 };
-}
-
 
 }  // namespace hw3
 
 #define YYSTYPE hw3::STypePtr
-#define NEW(x, y) (std::shared_ptr<hw3::x>(new hw3::x(y)))
+#define NEW(x, y) (std::shared_ptr<hw3::x>(new hw3::x y))
+#define NEWSTD(x) (std::shared_ptr<hw3::StdType<x> >(new hw3::StdType<x>(x())))
+#define NEWSTD_V(x, y) (std::shared_ptr<hw3::StdType<x> >(new hw3::StdType<x>(x(y))))
 #define STYPE_TO_STR(x) (dynamic_pointer_cast<StringC>(x)->getString())
 #define STYPE2STD(t, x) (dynamic_pointer_cast<StdType<t> >(x)->getValue())
+#define DC(t, x) (dynamic_pointer_cast<hw3::t>(x))
+#define VECS(x) STYPE2STD(vector<string>, x)
+
 #endif

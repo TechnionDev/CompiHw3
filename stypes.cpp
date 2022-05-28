@@ -128,7 +128,7 @@ void SymbolTable::addSymbol(string name, shared_ptr<IdC> type) {
     this->currOffset++;
 }
 
-IdC *SymbolTable::getSymbol(const string &name) {
+shared_ptr<IdC> SymbolTable::getSymbol(const string &name) {
     // Check that the symbol exists in the symbol table
     if (this->symTbl[name] == nullptr) {
         // TODO: errorUndef
@@ -150,5 +150,6 @@ const string &StringC::getString() const {
     return this->value;
 }
 
-
 }  // namespace hw3
+
+
