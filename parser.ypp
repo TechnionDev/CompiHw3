@@ -6,8 +6,8 @@
 #include "tokens.hpp"
 #include "stypes.hpp"
 
-#define GET_SYM(x) symbolTable.getSymbol(STYPE_TO_STR(x))
-#define GET_SYMTYPE(x) symbolTable.getSymbol(STYPE_TO_STR(x))->getType()
+#define GET_SYM(x) symbolTable.getSymbol(STYPE2STD(string, x))
+#define GET_SYMTYPE(x) symbolTable.getSymbol(STYPE2STD(string, x))->getType()
 
 
 namespace yy {
@@ -98,17 +98,33 @@ hw3::SymbolTable symbolTable;
 
 %%
 /* Rules */
-Program:        Funcs                               { /* TODO: Do something here */ };
+Program:        Funcs                               {
+                                                    auto mainSym = symbolTable.getSymbol("main");
+                                                    auto mainFunc = DC(FuncIdC, mainSym);
+                                                    if (mainFunc == nullptr 
+                                                            or mainFunc->getType() != "void" 
+                                                            or mainFunc->getArgTypes().size() != 0) {
+                                                        errorMainMissing();
+                                                    }
+                                                    symbolTable.removeScope();
+                                                    }
+                ;
 Funcs:          /* Epsilon */                       {}
                 | FuncDecl Funcs                    {};
 FuncDecl:       RetType ID LPAREN Formals           {
-                                                    shared_ptr<FuncIdC> funcId(NEW(FuncIdC, (STYPE_TO_STR($2), STYPE_TO_STR($1), VECS($4))));
-                                                    symbolTable.addSymbol(STYPE_TO_STR($2), funcId);
+                                                    shared_ptr<FuncIdC> funcId(NEW(FuncIdC, (STYPE2STD(string, $2), DC(RetTypeNameC, $1)->getTypeName(), VECS($4))));
+                                                    symbolTable.addSymbol(STYPE2STD(string, $2), funcId);
                                                     }
                     RPAREN LBRACE
-                                                    {symbolTable.addScope();} 
+                                                    {
+                                                    symbolTable.addScope();
+                                                    symbolTable.retType = DC(RetTypeNameC, $1);
+                                                    } 
                     Statements RBRACE
-                                                    {symbolTable.removeScope();}
+                                                    {
+                                                    symbolTable.removeScope();
+                                                    symbolTable.retType = nullptr;
+                                                    }
 ;
 RetType:        Type                                {$$ = $1;}
                 | VOID                              {$$ = NEW(RetTypeNameC, ("VOID"));}
@@ -116,11 +132,14 @@ RetType:        Type                                {$$ = $1;}
 Formals:        /* Epsilon */                       {$$ = NEWSTD(vector<string>);}
                 | FormalsList                       {$$ = $1;}
 ;
-FormalsList:    FormalDecl                          {auto vec = vector<string>();
+FormalsList:    FormalDecl                          {
+                                                    auto vec = vector<string>();
                                                     vec.push_back(DC(IdC, $1)->getType());
-                                                    $$ = NEWSTD_V(vector<string>, vec);}
-                | FormalDecl COMMA FormalsList      {VECS($3).push_back(DC(IdC, $1)->getType());
-                                                    $$ = $3;}
+                                                    $$ = NEWSTD_V(vector<string>, (vec));}
+                | FormalDecl COMMA FormalsList      {
+                                                    VECS($3).push_back(DC(IdC, $1)->getType());
+                                                    $$ = $3;
+                                                    }
                 ;
 FormalDecl:     TypeDecl                            {$$ = $1;}
                 ;
@@ -129,27 +148,42 @@ Statements:     Statement                           {}
                 ;
 Statement:      LBRACE {symbolTable.addScope();} Statements RBRACE {symbolTable.removeScope();}
                 | TypeDecl SC                       {}
-                | TypeDecl ASSIGN Exp SC            {if (DC(IdC, $1)->getType() != DC(ExpC, $3)->getType()) {
+                | TypeDecl ASSIGN Exp SC            {
+                                                    if (DC(IdC, $1)->getType() != DC(ExpC, $3)->getType()) {
                                                         errorMismatch(yylineno);
-                                                    }}
-                | AUTO ID ASSIGN Exp SC             {symbolTable.addSymbol(STYPE_TO_STR($2), NEW(IdC,(STYPE_TO_STR($2), DC(ExpC, $4)->getType())));}
-                | ID ASSIGN Exp SC                  {if (GET_SYM($1)->getType() != DC(ExpC,$3)->getType()) {
+                                                    }
+                                                    }
+                | AUTO ID ASSIGN Exp SC             {symbolTable.addSymbol(STYPE2STD(string, $2), NEW(IdC,(STYPE2STD(string, $2), DC(ExpC, $4)->getType())));}
+                | ID ASSIGN Exp SC                  {
+                                                    if (GET_SYM($1)->getType() != DC(ExpC,$3)->getType()) {
                                                         errorMismatch(yylineno);
-                                                    }}
+                                                    }
+                                                    }
                 | Call SC                           {}
                 | RETURN SC                         { /* TODO: Check return type matches */ }
                 | RETURN Exp SC                     { /* TODO: Check return type matches */ }
                 | IF LPAREN Exp RPAREN Statement  %prec IF  {}
                 | IF LPAREN Exp RPAREN Statement ELSE Statement {}
-                | WHILE LPAREN Exp RPAREN Statement {}
-                | BREAK SC                          { /* TODO: Check we're inside a while */ }
-                | CONTINUE SC                       { /* TODO: Check we're inside a while */ }
+                | WHILE LPAREN Exp RPAREN {symbolTable.nestedLoopDepth++;} Statement {symbolTable.nestedLoopDepth--;}
+                | BREAK SC                          {
+                                                        if (symbolTable.nestedLoopDepth == 0) {
+                                                            errorUnexpectedBreak(yylineno);
+                                                        }
+                                                    }
+                | CONTINUE SC                       { 
+                                                        if (symbolTable.nestedLoopDepth == 0) {
+                                                            errorUnexpectedContinue(yylineno);
+                                                        }
+                                                    }
                 ;
-TypeDecl:       Type ID                             {auto symbol = NEW(IdC, (STYPE_TO_STR($2), DC(VarTypeNameC, $1)->getTypeName()));
-                                                    symbolTable.addSymbol(STYPE_TO_STR($2), symbol);
-                                                    $$ = symbol;}
+TypeDecl:       Type ID                             {
+                                                    auto symbol = NEW(IdC, (STYPE2STD(string, $2), DC(VarTypeNameC, $1)->getTypeName()));
+                                                    symbolTable.addSymbol(STYPE2STD(string, $2), symbol);
+                                                    $$ = symbol;
+                                                    }
                 ;
-Call:           ID LPAREN ExpList RPAREN            {auto symbol = GET_SYM($1);
+Call:           ID LPAREN ExpList RPAREN            {
+                                                    auto symbol = GET_SYM($1);
                                                     auto funcId = DC(FuncIdC, symbol);
                                                     if (funcId == nullptr) {
                                                         errorUndefFunc(yylineno, funcId->getName());
@@ -163,8 +197,10 @@ Call:           ID LPAREN ExpList RPAREN            {auto symbol = GET_SYM($1);
                                                             }
                                                         }
                                                         $$ = NEW(RetTypeNameC, (funcId->getType()));
-                                                    }}
-                | ID LPAREN RPAREN                  {auto symbol = GET_SYM($1);
+                                                    }
+                                                    }
+                | ID LPAREN RPAREN                  {
+                                                    auto symbol = GET_SYM($1);
                                                     auto funcId = DC(FuncIdC, symbol);
                                                     if (funcId == nullptr) {
                                                         errorUndefFunc(yylineno, funcId->getName());
@@ -172,7 +208,8 @@ Call:           ID LPAREN ExpList RPAREN            {auto symbol = GET_SYM($1);
                                                         errorPrototypeMismatch(yylineno, funcId->getName(), funcId->getArgTypes());
                                                     } else {
                                                         $$ = NEW(RetTypeNameC, (funcId->getType()));
-                                                    }}
+                                                    }
+                                                    }
                 ;
 ExpList:        Exp                                 {$$ = NEWSTD(vector<string>);
                                                     VECS($$).push_back(DC(ExpC, $1)->getType());}

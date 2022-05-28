@@ -20,7 +20,8 @@ typedef enum {
     STId,
     STCall,
     STString,
-    STStd
+    STStd,
+    STRetType
 } SymbolType;
 
 const string &verifyAllTypeNames(const string &type);
@@ -33,6 +34,7 @@ class STypeC {
 
    public:
     STypeC(SymbolType symType);
+    virtual ~STypeC() = default;
 };
 // TODO:
 typedef shared_ptr<STypeC> STypePtr;
@@ -91,6 +93,8 @@ class SymbolTable {
     int currOffset;
 
    public:
+    shared_ptr<RetTypeNameC> retType;
+    int nestedLoopDepth;
     SymbolTable();
     void addScope();
     void removeScope();
@@ -133,7 +137,7 @@ class StdType : public STypeC {
 #define YYSTYPE hw3::STypePtr
 #define NEW(x, y) (std::shared_ptr<hw3::x>(new hw3::x y))
 #define NEWSTD(x) (std::shared_ptr<hw3::StdType<x> >(new hw3::StdType<x>(x())))
-#define NEWSTD_V(x, y) (std::shared_ptr<hw3::StdType<x> >(new hw3::StdType<x>(x(y))))
+#define NEWSTD_V(x, y) (std::shared_ptr<hw3::StdType<x> >(new hw3::StdType<x>(x y)))
 #define STYPE_TO_STR(x) (dynamic_pointer_cast<StringC>(x)->getString())
 #define STYPE2STD(t, x) (dynamic_pointer_cast<StdType<t> >(x)->getValue())
 #define DC(t, x) (dynamic_pointer_cast<hw3::t>(x))

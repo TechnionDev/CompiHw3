@@ -8,6 +8,7 @@ namespace hw3 {
 
 STypeC::STypeC(SymbolType symType) : symType(symType) {}
 
+
 const string &verifyAllTypeNames(const string &type) {
     if (type == "INT" or type == "BOOL" or type == "BYTE" or type == "VOID" or type == "STRING" or "BAD_VIRTUAL_CALL") {
         return type;
@@ -44,11 +45,11 @@ const string &verifyVarTypeName(const string &type) {
     }
 }
 
-RetTypeNameC::RetTypeNameC(const string &type) : type(verifyRetTypeName(type)) {}
+RetTypeNameC::RetTypeNameC(const string &type) : STypeC(STRetType),  type(verifyRetTypeName(type)) {}
 
 VarTypeNameC::VarTypeNameC(const string &type) : RetTypeNameC(verifyVarTypeName(type)) {}
 
-ExpC::ExpC(const string &type) : type(verifyValTypeName(type)) {}
+ExpC::ExpC(const string &type) : STypeC(STExpression), type(verifyValTypeName(type)) {}
 
 CallC::CallC(const string &type, const string &symbol) : STypeC(STCall), type(verifyRetTypeName(type)), symbol(symbol) {}
 
@@ -91,8 +92,13 @@ const string &FuncIdC::getType() const {
 const vector<string> &FuncIdC::getArgTypes() const {
     return this->argTypes;
 }
+vector<string> &FuncIdC::getArgTypes() {
+    return this->argTypes;
+}
 
 SymbolTable::SymbolTable() {
+    this->nestedLoopDepth = 0;
+    this->currOffset = 0;
     this->addScope();
     this->addSymbol("print", NEW(IdC, ("print", "STRING")));
     this->addSymbol("print", NEW(IdC, ("printi", "int")));
@@ -117,11 +123,15 @@ void SymbolTable::removeScope() {
     scopeStartOffsets.pop_back();
 }
 
+const string &RetTypeNameC::getTypeName() const {
+    return this->type;
+}
+
 void SymbolTable::addSymbol(string name, shared_ptr<IdC> type) {
     // Check that the symbol doesn't exist in the scope yet
-    if (this->scopeSymbols.back().find(name) != this->scopeSymbols.back().end()) {
-        // TODO: errorDef
-        throw "Symbol already exists in current scope";
+    if (this->scopeSymbols.back().end() != find(this->scopeSymbols.back().begin(), this->scopeSymbols.back().end(), name)) {
+        errorDef(-1, name);
+        exit(1);
     }
     this->scopeSymbols.back().push_back(name);
     this->symTbl[name] = type;
@@ -140,7 +150,7 @@ shared_ptr<IdC> SymbolTable::getSymbol(const string &name) {
 void SymbolTable::printSymbolTable() {
     int offset = 0;
     for (auto it = this->symTbl.begin(); it != this->symTbl.end(); ++it) {
-        printID(it->first, offset++, it->second->getTypeName());
+        printID(it->first, offset++, it->second->getType());
     }
 }
 
