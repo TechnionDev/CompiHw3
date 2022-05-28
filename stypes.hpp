@@ -19,7 +19,8 @@ typedef enum {
     STExpression,
     STId,
     STCall,
-    STString
+    STString,
+    STStd
 } SymbolType;
 
 const string &verifyAllTypeNames(const string &type);
@@ -114,6 +115,15 @@ class StringC : public STypeC {
     const string& getString() const;
 };
 
+template <typename T>
+class StdType : public STypeC {
+    T value;
+
+   public:
+    StdType(T value): STypeC(STStd), value(value) {};
+    const T& getValue() const { return value; };
+};
+}
 
 
 }  // namespace hw3
@@ -121,4 +131,5 @@ class StringC : public STypeC {
 #define YYSTYPE hw3::STypePtr
 #define NEW(x, y) (std::shared_ptr<hw3::x>(new hw3::x(y)))
 #define STYPE_TO_STR(x) (dynamic_pointer_cast<StringC>(x)->getString())
+#define STYPE2STD(t, x) (dynamic_pointer_cast<StdType<t> >(x)->getValue())
 #endif
