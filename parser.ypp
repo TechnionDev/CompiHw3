@@ -6,6 +6,10 @@
 #include "tokens.hpp"
 #include "stypes.hpp"
 
+#define GET_SYM(x) symbolTable.getSymbol(STYPE_TO_STR(x))
+#define GET_SYMTYPE(x) symbolTable.getSymbol(STYPE_TO_STR(x))->getType()
+
+
 namespace yy {
 using namespace output;
 using namespace hw3;
@@ -98,23 +102,24 @@ Program:        Funcs                               { /* TODO: Do something here
 Funcs:          /* Epsilon */                       {}
                 | FuncDecl Funcs                    {};
 FuncDecl:       RetType ID LPAREN Formals           {
-                                                    shared_ptr<FuncIdC> funcId(new FuncIdC(STYPE_TO_STR($2), STYPE_TO_STR($1), STYPE2STD(vector<string>, $4));
-                                                    symbolTable.addFunc($2, funcId);}
-                                    RPAREN LBRACE 
+                                                    shared_ptr<FuncIdC> funcId(NEW(FuncIdC, (STYPE_TO_STR($2), STYPE_TO_STR($1), VECS($4))));
+                                                    symbolTable.addSymbol(STYPE_TO_STR($2), funcId);
+                                                    }
+                    RPAREN LBRACE
                                                     {symbolTable.addScope();} 
-                                    Statements RBRACE 
-                                                    {symbolTable.popScope();}
+                    Statements RBRACE
+                                                    {symbolTable.removeScope();}
 ;
 RetType:        Type                                {$$ = $1;}
-                | VOID                              {$$ = NEW(RetTypeNameC,("VOID"));}
+                | VOID                              {$$ = NEW(RetTypeNameC, ("VOID"));}
                 ;
-Formals:        /* Epsilon */                       {$$ = new vector<string>();}
+Formals:        /* Epsilon */                       {$$ = NEWSTD(vector<string>);}
                 | FormalsList                       {$$ = $1;}
 ;
-FormalsList:    FormalDecl                          {auto vec = new vector<string>();
-                                                    vec->push_back($1->getType());
-                                                    $$ = vec;}
-                | FormalDecl COMMA FormalsList      {$3->push_back($1->getType());
+FormalsList:    FormalDecl                          {auto vec = vector<string>();
+                                                    vec.push_back(DC(IdC, $1)->getType());
+                                                    $$ = NEWSTD_V(vector<string>, vec);}
+                | FormalDecl COMMA FormalsList      {VECS($3).push_back(DC(IdC, $1)->getType());
                                                     $$ = $3;}
                 ;
 FormalDecl:     TypeDecl                            {$$ = $1;}
@@ -122,13 +127,13 @@ FormalDecl:     TypeDecl                            {$$ = $1;}
 Statements:     Statement                           {}
                 | Statements Statement              {}
                 ;
-Statement:      LBRACE {symbolTable.addScope();} Statements RBRACE {symbolTable.popScope();}
+Statement:      LBRACE {symbolTable.addScope();} Statements RBRACE {symbolTable.removeScope();}
                 | TypeDecl SC                       {}
-                | TypeDecl ASSIGN Exp SC            {if ($1->getType() != $3->getType()) {
+                | TypeDecl ASSIGN Exp SC            {if (DC(IdC, $1)->getType() != DC(ExpC, $3)->getType()) {
                                                         errorMismatch(yylineno);
                                                     }}
-                | AUTO ID ASSIGN Exp SC             {symbolTable.addSymbol($2, new IdC($2, $4->getType()));}
-                | ID ASSIGN Exp SC                  {if (symbolTable.getSymbol($1)->getType() != $3->getType()) {
+                | AUTO ID ASSIGN Exp SC             {symbolTable.addSymbol(STYPE_TO_STR($2), NEW(IdC,(STYPE_TO_STR($2), DC(ExpC, $4)->getType())));}
+                | ID ASSIGN Exp SC                  {if (GET_SYM($1)->getType() != DC(ExpC,$3)->getType()) {
                                                         errorMismatch(yylineno);
                                                     }}
                 | Call SC                           {}
@@ -140,71 +145,71 @@ Statement:      LBRACE {symbolTable.addScope();} Statements RBRACE {symbolTable.
                 | BREAK SC                          { /* TODO: Check we're inside a while */ }
                 | CONTINUE SC                       { /* TODO: Check we're inside a while */ }
                 ;
-TypeDecl:       Type ID                             {IdC *symbol = new IdC($2, $1.getTypeName());
-                                                    symbolTable.addSymbol($2, symbol);
+TypeDecl:       Type ID                             {auto symbol = NEW(IdC, (STYPE_TO_STR($2), DC(VarTypeNameC, $1)->getTypeName()));
+                                                    symbolTable.addSymbol(STYPE_TO_STR($2), symbol);
                                                     $$ = symbol;}
                 ;
-Call:           ID LPAREN ExpList RPAREN            {IdC *symbol = symbolTable.getSymbol($1);
-                                                    FuncIdC *funcId = dynamic_cast<FuncIdC*>(symbol);
+Call:           ID LPAREN ExpList RPAREN            {auto symbol = GET_SYM($1);
+                                                    auto funcId = DC(FuncIdC, symbol);
                                                     if (funcId == nullptr) {
-                                                        errorUndefFunc(yylineno);
-                                                    } else if (funcId->getFormals()->size() != $3->size()) {
+                                                        errorUndefFunc(yylineno, funcId->getName());
+                                                    } else if (funcId->getArgTypes().size() != STYPE2STD(vector<string>, $3).size()) {
                                                         errorPrototypeMismatch(yylineno, funcId->getName(), funcId->getArgTypes());
                                                     } else {
-                                                        for (int i = 0; i < $3->size(); i++) {
-                                                            if (funcId->getArgTypes()[i] != $3 [i]->getType()) {
+                                                        for (int i = 0; i < STYPE2STD(vector<string>, $3).size(); i++) {
+                                                            if (funcId->getArgTypes()[i] != STYPE2STD(vector<string>, $3)[i]) {
                                                                 errorPrototypeMismatch(yylineno, funcId->getName(), funcId->getArgTypes());
                                                                 // TODO: Exit
                                                             }
                                                         }
-                                                        $$ = new RetTypeName(funcId->getType());
+                                                        $$ = NEW(RetTypeNameC, (funcId->getType()));
                                                     }}
-                | ID LPAREN RPAREN                  {IdC *symbol = symbolTable.getSymbol($1);
-                                                    FuncIdC *funcId = dynamic_cast<FuncIdC*>(symbol);
+                | ID LPAREN RPAREN                  {auto symbol = GET_SYM($1);
+                                                    auto funcId = DC(FuncIdC, symbol);
                                                     if (funcId == nullptr) {
-                                                        errorUndefFunc(yylineno);
+                                                        errorUndefFunc(yylineno, funcId->getName());
                                                     } else if (funcId->getArgTypes().size() != 0) {
                                                         errorPrototypeMismatch(yylineno, funcId->getName(), funcId->getArgTypes());
                                                     } else {
-                                                        $$ = new RetTypeName(funcId->getType());
+                                                        $$ = NEW(RetTypeNameC, (funcId->getType()));
                                                     }}
                 ;
-ExpList:        Exp                                 {$$ = new vector<string>();
-                                                    $$->push_back($1->getType());}
-                | Exp COMMA ExpList                 {$3->push_back($1->getType());
+ExpList:        Exp                                 {$$ = NEWSTD(vector<string>);
+                                                    VECS($$).push_back(DC(ExpC, $1)->getType());}
+                | Exp COMMA ExpList                 {VECS($3).push_back(DC(ExpC, $1)->getType());
                                                     $$ = $3;}
                 ;
-Type:           INT                                 {$$ = new VarTypeNameC("INT");}
-                | BYTE                              {$$ = new VarTypeNameC("BYTE");}
-                | BOOL                              {$$ = new VarTypeNameC("BOOL");}
+Type:           INT                                 {$$ = NEW(VarTypeNameC, ("INT"));}
+                | BYTE                              {$$ = NEW(VarTypeNameC, ("BYTE"));}
+                | BOOL                              {$$ = NEW(VarTypeNameC, ("BOOL"));}
                 ;
 Exp:            LPAREN Exp RPAREN                   {$$ = $2;}
-                | Exp PLUSOP Exp                    { if (not ($1->isInt() or $1->isByte()) and not ($3->isInt() or $3->isByte())) {
+                | Exp PLUSOP Exp                    { if (not (DC(ExpC, $1)->isInt() or DC(ExpC, $1)->isByte()) and not (DC(ExpC, $3)->isInt() or DC(ExpC, $3)->isByte())) {
                                                         errorMismatch(yylineno);
-                                                    } else if ($1->isInt() or $3->isInt()) {
-                                                        $$ = new ExpC("INT");
+                                                    } else if (DC(ExpC, $1)->isInt() or DC(ExpC, $3)->isInt()) {
+                                                        $$ = NEW(ExpC,("INT"));
                                                     } else /* Both are bytes */ {
-                                                        $$ = new ExpC("BYTE");
+                                                        $$ = NEW(ExpC,("BYTE"));
                                                     }}
-                | Exp MULTOP Exp                    { if (not ($1->isInt() or $1->isByte()) and not ($3->isInt() or $3->isByte())) {
+                | Exp MULTOP Exp                    { if (not (DC(ExpC, $1)->isInt() or DC(ExpC, $1)->isByte()) and not (DC(ExpC, $3)->isInt() or DC(ExpC, $3)->isByte())) {
                                                         errorMismatch(yylineno);
-                                                    } else if ($1->isInt() or $3->isInt()) {
-                                                        $$ = new ExpC("INT");
+                                                    } else if (DC(ExpC, $1)->isInt() or DC(ExpC, $3)->isInt()) {
+                                                        $$ = NEW(ExpC,("INT"));
                                                     } else /* Both are bytes */ {
-                                                        $$ = new ExpC("BYTE");
+                                                        $$ = NEW(ExpC,("BYTE"));
                                                     }}
-                | ID                                {$$ = new ExpC(symbolTable.getSymbol($1)->getType());}
-                | Call                              {$$ = new ExpC($1->getType());}
-                | NUM                               {$$ = new ExpC("INT");}
-                | NUM B                             {$$ = new ExpC("BYTE");}
-                | STRING                            {$$ = new ExpC("STRING");}
-                | TRUE                              {$$ = new ExpC("BOOL");}
-                | FALSE                             {$$ = new ExpC("BOOL");}
-                | NOT Exp                           {if (not $2->isBool()) {errorMismatch(yylineno);} $$ = new ExpC("BOOL");}
-                | Exp AND Exp                       {if (not $1->isBool() or not $3->isBool()) {errorMismatch(yylineno);} $$ = new ExpC("BOOL");}
-                | Exp OR Exp                        {if (not $1->isBool() or not $3->isBool()) {errorMismatch(yylineno);} $$ = new ExpC("BOOL");}
-                | Exp RELOP Exp                     {if (not $1->isInt() or not $3->isInt()) {errorMismatch(yylineno);} $$ = new ExpC("BOOL");}
-                | Exp EQOP Exp                      {if (not $1->isInt() or not $3->isInt()) {errorMismatch(yylineno);} $$ = new ExpC("BOOL");}
+                | ID                                {$$ = NEW(ExpC,(GET_SYMTYPE($1)));}
+                | Call                              {$$ = NEW(ExpC,(DC(ExpC, $1)->getType()));}
+                | NUM                               {$$ = NEW(ExpC,("INT"));}
+                | NUM B                             {$$ = NEW(ExpC,("BYTE"));}
+                | STRING                            {$$ = NEW(ExpC,("STRING"));}
+                | TRUE                              {$$ = NEW(ExpC,("BOOL"));}
+                | FALSE                             {$$ = NEW(ExpC,("BOOL"));}
+                | NOT Exp                           {if (not DC(ExpC, $2)->isBool()) {errorMismatch(yylineno);} $$ = NEW(ExpC, ("BOOL"));}
+                | Exp AND Exp                       {if (not DC(ExpC, $1)->isBool() or not DC(ExpC, $3)->isBool()) {errorMismatch(yylineno);} $$ = NEW(ExpC,("BOOL"));}
+                | Exp OR Exp                        {if (not DC(ExpC, $1)->isBool() or not DC(ExpC, $3)->isBool()) {errorMismatch(yylineno);} $$ = NEW(ExpC,("BOOL"));}
+                | Exp RELOP Exp                     {if (not DC(ExpC, $1)->isInt() or not DC(ExpC, $3)->isInt()) {errorMismatch(yylineno);} $$ = NEW(ExpC,("BOOL"));}
+                | Exp EQOP Exp                      {if (not DC(ExpC, $1)->isInt() or not DC(ExpC, $3)->isInt()) {errorMismatch(yylineno);} $$ = NEW(ExpC,("BOOL"));}
                 | LPAREN Type RPAREN Exp            { /* TODO: Which casts are allowed */ }
                 ;
 %%
