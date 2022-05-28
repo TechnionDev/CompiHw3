@@ -101,8 +101,8 @@ hw3::SymbolTable symbolTable;
 Program:        Funcs                               {
                                                     auto mainSym = symbolTable.getSymbol("main");
                                                     auto mainFunc = DC(FuncIdC, mainSym);
-                                                    if (mainFunc == nullptr 
-                                                            or mainFunc->getType() != "void" 
+                                                    if (mainFunc == nullptr
+                                                            or mainFunc->getType() != "void"
                                                             or mainFunc->getArgTypes().size() != 0) {
                                                         errorMainMissing();
                                                     }
@@ -119,7 +119,7 @@ FuncDecl:       RetType ID LPAREN Formals           {
                                                     {
                                                     symbolTable.addScope();
                                                     symbolTable.retType = DC(RetTypeNameC, $1);
-                                                    } 
+                                                    }
                     Statements RBRACE
                                                     {
                                                     symbolTable.removeScope();
@@ -155,13 +155,25 @@ Statement:      LBRACE {symbolTable.addScope();} Statements RBRACE {symbolTable.
                                                     }
                 | AUTO ID ASSIGN Exp SC             {symbolTable.addSymbol(STYPE2STD(string, $2), NEW(IdC,(STYPE2STD(string, $2), DC(ExpC, $4)->getType())));}
                 | ID ASSIGN Exp SC                  {
-                                                    if (GET_SYM($1)->getType() != DC(ExpC,$3)->getType()) {
-                                                        errorMismatch(yylineno);
-                                                    }
+                                                        if (GET_SYM($1)->getType() != DC(ExpC,$3)->getType()) {
+                                                            errorMismatch(yylineno);
+                                                        }
                                                     }
                 | Call SC                           {}
-                | RETURN SC                         { /* TODO: Check return type matches */ }
-                | RETURN Exp SC                     { /* TODO: Check return type matches */ }
+                | RETURN SC                         {
+                                                        if (symbolTable.retType == nullptr) {
+                                                            throw "This should be impossible. Syntax error wise";
+                                                        } else if (symbolTable.retType->getTypeName() != "VOID") {
+                                                            // TODO: What do I do here?
+                                                        }
+                                                    }
+                | RETURN Exp SC                     {
+                                                        if (symbolTable.retType == nullptr) {
+                                                            throw "This should be impossible. Syntax error wise";
+                                                        } else if (symbolTable.retType->getTypeName() != DC(ExpC, $2)->getType()) {
+                                                            // TODO: What do I do here?
+                                                        }
+                                                    }
                 | IF LPAREN Exp RPAREN Statement  %prec IF  {}
                 | IF LPAREN Exp RPAREN Statement ELSE Statement {}
                 | WHILE LPAREN Exp RPAREN {symbolTable.nestedLoopDepth++;} Statement {symbolTable.nestedLoopDepth--;}
@@ -170,7 +182,7 @@ Statement:      LBRACE {symbolTable.addScope();} Statements RBRACE {symbolTable.
                                                             errorUnexpectedBreak(yylineno);
                                                         }
                                                     }
-                | CONTINUE SC                       { 
+                | CONTINUE SC                       {
                                                         if (symbolTable.nestedLoopDepth == 0) {
                                                             errorUnexpectedContinue(yylineno);
                                                         }
