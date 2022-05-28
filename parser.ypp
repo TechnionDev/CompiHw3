@@ -6,8 +6,11 @@
 #include "tokens.hpp"
 #include "stypes.hpp"
 
-#define GET_SYM(x) symbolTable.getSymbol(STYPE2STD(string, x))
-#define GET_SYMTYPE(x) symbolTable.getSymbol(STYPE2STD(string, x))->getType()
+#define GET_SYM(x) symbolTable.getVarSymbol(STYPE2STD(string, x))
+#define GET_SYMTYPE(x) symbolTable.getVarSymbol(STYPE2STD(string, x))->getType()
+
+#define GET_FUNC(x) symbolTable.getFuncSymbol(STYPE2STD(string, x))
+#define GET_FUNCTYPE(x) symbolTable.getFuncSymbol(STYPE2STD(string, x))->getType()
 
 
 namespace yy {
@@ -43,11 +46,8 @@ hw3::SymbolTable symbolTable;
 %nonassoc VOID
 %nonassoc INT
 %nonassoc BYTE
-/* %nonassoc <exp> INT
-%nonassoc <exp> BYTE */
 %nonassoc B
 %nonassoc BOOL
-/* %nonassoc <exp> BOOL */
 %nonassoc AUTO
 %nonassoc TRUE
 %nonassoc FALSE
@@ -59,7 +59,6 @@ hw3::SymbolTable symbolTable;
 %nonassoc CONTINUE
 %nonassoc SC
 %nonassoc COMMENT
-/* %nonassoc <operator*()> ID */
 %nonassoc ID
 %nonassoc NUM
 %nonassoc STRING
@@ -77,33 +76,12 @@ hw3::SymbolTable symbolTable;
 %left RPAREN
 %left LBRACE
 %left RBRACE
-/* %type <operator*()> Exp
-%type <operator*()> Type;
-%type <operator*()> RetType;
-%type <operator*()> Formals;
-%type <operator*()> FormalDecl;
-%type <operator*()> TypeDecl;
-%type <operator*()> FormalsList;
-%type <operator*()> Call;
-%type <operator*()> ExpList; */
-/* %type <exp> Exp
-%type <varTypeName> Type;
-%type <retType> RetType;
-%type <idList> Formals;
-%type <id> FormalDecl;
-%type <id> TypeDecl;
-%type <idList> FormalsList;
-%type <retType> Call;
-%type <typeList> ExpList; */
 
 %%
 /* Rules */
 Program:        Funcs                               {
-                                                    auto mainSym = symbolTable.getSymbol("main");
-                                                    auto mainFunc = DC(FuncIdC, mainSym);
-                                                    if (mainFunc == nullptr
-                                                            or mainFunc->getType() != "void"
-                                                            or mainFunc->getArgTypes().size() != 0) {
+                                                    auto mainFunc = GET_FUNC("main");
+                                                    if (mainFunc->getType() != "void" or mainFunc->getArgTypes().size() != 0) {
                                                         errorMainMissing();
                                                     }
                                                     symbolTable.removeScope();
@@ -155,7 +133,7 @@ Statement:      LBRACE {symbolTable.addScope();} Statements RBRACE {symbolTable.
                                                     }
                 | AUTO ID ASSIGN Exp SC             {symbolTable.addSymbol(STYPE2STD(string, $2), NEW(IdC,(STYPE2STD(string, $2), DC(ExpC, $4)->getType())));}
                 | ID ASSIGN Exp SC                  {
-                                                        if (GET_SYM($1)->getType() != DC(ExpC,$3)->getType()) {
+                                                        if (GET_SYMTYPE($1) != DC(ExpC,$3)->getType()) {
                                                             errorMismatch(yylineno);
                                                         }
                                                     }
@@ -164,14 +142,14 @@ Statement:      LBRACE {symbolTable.addScope();} Statements RBRACE {symbolTable.
                                                         if (symbolTable.retType == nullptr) {
                                                             throw "This should be impossible. Syntax error wise";
                                                         } else if (symbolTable.retType->getTypeName() != "VOID") {
-                                                            // TODO: What do I do here?
+                                                            errorMismatch(yylineno);
                                                         }
                                                     }
                 | RETURN Exp SC                     {
                                                         if (symbolTable.retType == nullptr) {
                                                             throw "This should be impossible. Syntax error wise";
                                                         } else if (symbolTable.retType->getTypeName() != DC(ExpC, $2)->getType()) {
-                                                            // TODO: What do I do here?
+                                                            errorMismatch(yylineno);
                                                         }
                                                     }
                 | IF LPAREN Exp RPAREN Statement  %prec IF  {}
@@ -195,28 +173,21 @@ TypeDecl:       Type ID                             {
                                                     }
                 ;
 Call:           ID LPAREN ExpList RPAREN            {
-                                                    auto symbol = GET_SYM($1);
-                                                    auto funcId = DC(FuncIdC, symbol);
-                                                    if (funcId == nullptr) {
-                                                        errorUndefFunc(yylineno, funcId->getName());
-                                                    } else if (funcId->getArgTypes().size() != STYPE2STD(vector<string>, $3).size()) {
+                                                    auto funcId = GET_FUNC($1);
+                                                    if (funcId->getArgTypes().size() != STYPE2STD(vector<string>, $3).size()) {
                                                         errorPrototypeMismatch(yylineno, funcId->getName(), funcId->getArgTypes());
                                                     } else {
                                                         for (int i = 0; i < STYPE2STD(vector<string>, $3).size(); i++) {
                                                             if (funcId->getArgTypes()[i] != STYPE2STD(vector<string>, $3)[i]) {
                                                                 errorPrototypeMismatch(yylineno, funcId->getName(), funcId->getArgTypes());
-                                                                // TODO: Exit
                                                             }
                                                         }
                                                         $$ = NEW(RetTypeNameC, (funcId->getType()));
                                                     }
                                                     }
                 | ID LPAREN RPAREN                  {
-                                                    auto symbol = GET_SYM($1);
-                                                    auto funcId = DC(FuncIdC, symbol);
-                                                    if (funcId == nullptr) {
-                                                        errorUndefFunc(yylineno, funcId->getName());
-                                                    } else if (funcId->getArgTypes().size() != 0) {
+                                                    auto funcId = GET_FUNC($1);
+                                                    if (funcId->getArgTypes().size() != 0) {
                                                         errorPrototypeMismatch(yylineno, funcId->getName(), funcId->getArgTypes());
                                                     } else {
                                                         $$ = NEW(RetTypeNameC, (funcId->getType()));
@@ -250,7 +221,7 @@ Exp:            LPAREN Exp RPAREN                   {$$ = $2;}
                 | ID                                {$$ = NEW(ExpC,(GET_SYMTYPE($1)));}
                 | Call                              {$$ = NEW(ExpC,(DC(ExpC, $1)->getType()));}
                 | NUM                               {$$ = NEW(ExpC,("INT"));}
-                | NUM B                             {$$ = NEW(ExpC,("BYTE"));}
+                | NUM B                             {$$ = NEW(ExpC,("BYTE")); /* TODO: Check upto 256 */}
                 | STRING                            {$$ = NEW(ExpC,("STRING"));}
                 | TRUE                              {$$ = NEW(ExpC,("BOOL"));}
                 | FALSE                             {$$ = NEW(ExpC,("BOOL"));}
