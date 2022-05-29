@@ -95,7 +95,7 @@ class SymbolTable {
     shared_ptr<RetTypeNameC> retType;
     int nestedLoopDepth;
     SymbolTable();
-    void addScope();
+    void addScope(int funcArgCount = 0);
     void removeScope();
     void addSymbol(string name, shared_ptr<IdC> type);
     shared_ptr<IdC> getVarSymbol(const string &name);

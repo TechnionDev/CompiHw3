@@ -91,11 +91,16 @@ Program:        Funcs                               {
                 ;
 Funcs:          /* Epsilon */                       {}
                 | FuncDecl Funcs                    {};
-FuncDecl:       RetType ID LPAREN                   {symbolTable.addScope();}
-                    Formals                         {
+FuncDecl:       RetType ID LPAREN Formals           {
                                                         // TODO: Add formals to symbol table
-
-                                                        shared_ptr<FuncIdC> funcId(NEW(FuncIdC, (STYPE2STD(string, $2), DC(RetTypeNameC, $1)->getTypeName(), VECS($4))));
+                                                        auto formals = STYPE2STD(vector<shared_ptr<IdC> >, $4);
+                                                        symbolTable.addScope(formals.size());
+                                                        vector<string> argTypes;
+                                                        for (auto i = 0; i < formals.size(); i++) {
+                                                            symbolTable.addSymbol(formals[i]->getName(), formals[i]);
+                                                            argTypes.push_back(formals[i]->getType());
+                                                        }
+                                                        shared_ptr<FuncIdC> funcId(NEW(FuncIdC, (STYPE2STD(string, $2), DC(RetTypeNameC, $1)->getTypeName(), argTypes)));
                                                         symbolTable.addSymbol(STYPE2STD(string, $2), funcId);
                                                     }
                     RPAREN LBRACE                   {
@@ -109,16 +114,16 @@ FuncDecl:       RetType ID LPAREN                   {symbolTable.addScope();}
 RetType:        Type                                {$$ = $1;}
                 | VOID                              {$$ = NEW(RetTypeNameC, ("VOID"));}
                 ;
-Formals:        /* Epsilon */                       {$$ = NEWSTD(vector<IdC>);}
+Formals:        /* Epsilon */                       {$$ = NEWSTD(vector<shared_ptr<IdC> >);}
                 | FormalsList                       {$$ = $1;}
 ;
 FormalsList:    FormalDecl                          {
-                                                        auto vec = vector<IdC>();
+                                                        auto vec = vector<shared_ptr<IdC> >();
                                                         vec.push_back(DC(IdC, $1));
-                                                        $$ = NEWSTD_V(vector<IdC>, (vec));
+                                                        $$ = NEWSTD_V(vector<shared_ptr<IdC> >, (vec));
                                                     }
                 | FormalDecl COMMA FormalsList      {
-                                                        VECS($3).push_back(DC(IdC, $1));
+                                                        STYPE2STD(vector<shared_ptr<IdC> >, $3).push_back(DC(IdC, $1));
                                                         $$ = $3;
                                                     }
                 ;
