@@ -103,7 +103,13 @@ SymbolTable::SymbolTable() {
     this->addSymbol("print", NEW(IdC, ("printi", "int")));
 }
 
-void SymbolTable::addScope() {
+void SymbolTable::addScope(int funcArgCount) {
+    if (not ((funcArgCount == 0 and  this->scopeStartOffsets.size() == 1) or (this->scopeStartOffsets.size() > 1 and funcArgCount != 0))) {
+        throw "Code error. We should only add a scope of a function when we are in the global scope";
+    }
+    if (funcArgCount != 0) {
+        this->currOffset -= funcArgCount;
+    }
     this->scopeSymbols.push_back(vector<string>());
     this->scopeStartOffsets.push_back(this->currOffset);
 }
