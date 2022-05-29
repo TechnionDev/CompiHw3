@@ -147,12 +147,13 @@ shared_ptr<IdC> SymbolTable::getVarSymbol(const string &name) {
     return symbol;
 }
 
-shared_ptr<FuncIdC> SymbolTable::getFuncSymbol(const string &name) {
+shared_ptr<FuncIdC> SymbolTable::getFuncSymbol(const string &name, bool shouldError) {
     auto symbol = this->symTbl[name];
 
     // Check that the symbol exists in the symbol table
-    shared_ptr<FuncIdC> funcSym;
-    if (symbol == nullptr or (funcSym = DC(FuncIdC, symbol)) == nullptr) {
+    shared_ptr<FuncIdC> funcSym = nullptr;
+
+    if ((symbol == nullptr or (funcSym = DC(FuncIdC, symbol)) == nullptr) and shouldError) {
         errorUndefFunc(yylineno, name);
     }
 
