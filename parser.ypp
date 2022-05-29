@@ -80,9 +80,9 @@ hw3::SymbolTable symbolTable;
 %%
 /* Rules */
 Program:        Funcs                               {
-                                                        auto mainFunc = symbolTable.getFuncSymbol("main");
+                                                        auto mainFunc = symbolTable.getFuncSymbol("main", false);
 
-                                                        if (mainFunc->getType() != "void" or mainFunc->getArgTypes().size() != 0) {
+                                                        if (mainFunc == nullptr or mainFunc->getType() != "VOID" or mainFunc->getArgTypes().size() != 0) {
                                                             errorMainMissing();
                                                         }
 
@@ -91,34 +91,34 @@ Program:        Funcs                               {
                 ;
 Funcs:          /* Epsilon */                       {}
                 | FuncDecl Funcs                    {};
-FuncDecl:       RetType ID LPAREN Formals           { // TODO: Add formals to symbol table
+FuncDecl:       RetType ID LPAREN                   {symbolTable.addScope();}
+                    Formals                         {
+                                                        // TODO: Add formals to symbol table
+
                                                         shared_ptr<FuncIdC> funcId(NEW(FuncIdC, (STYPE2STD(string, $2), DC(RetTypeNameC, $1)->getTypeName(), VECS($4))));
                                                         symbolTable.addSymbol(STYPE2STD(string, $2), funcId);
                                                     }
-                    RPAREN LBRACE
-                                                    {
-                                                        symbolTable.addScope();
+                    RPAREN LBRACE                   {
                                                         symbolTable.retType = DC(RetTypeNameC, $1);
                                                     }
-                    Statements RBRACE
-                                                    {
-                                                    symbolTable.removeScope();
+                    Statements RBRACE               {
+                                                        symbolTable.removeScope();
                                                         symbolTable.retType = nullptr;
                                                     }
 ;
 RetType:        Type                                {$$ = $1;}
                 | VOID                              {$$ = NEW(RetTypeNameC, ("VOID"));}
                 ;
-Formals:        /* Epsilon */                       {$$ = NEWSTD(vector<string>);}
+Formals:        /* Epsilon */                       {$$ = NEWSTD(vector<IdC>);}
                 | FormalsList                       {$$ = $1;}
 ;
 FormalsList:    FormalDecl                          {
-                                                        auto vec = vector<string>();
-                                                        vec.push_back(DC(IdC, $1)->getType());
-                                                        $$ = NEWSTD_V(vector<string>, (vec));
+                                                        auto vec = vector<IdC>();
+                                                        vec.push_back(DC(IdC, $1));
+                                                        $$ = NEWSTD_V(vector<IdC>, (vec));
                                                     }
                 | FormalDecl COMMA FormalsList      {
-                                                        VECS($3).push_back(DC(IdC, $1)->getType());
+                                                        VECS($3).push_back(DC(IdC, $1));
                                                         $$ = $3;
                                                     }
                 ;
