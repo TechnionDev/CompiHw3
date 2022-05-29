@@ -9,7 +9,7 @@ namespace hw3 {
 STypeC::STypeC(SymbolType symType) : symType(symType) {}
 
 const string &verifyAllTypeNames(const string &type) {
-    if (type == "INT" or type == "BOOL" or type == "BYTE" or type == "VOID" or type == "STRING" or "BAD_VIRTUAL_CALL") {
+    if (type == "INT" or type == "BOOL" or type == "BYTE" or type == "VOID" or type == "STRING" or type == "BAD_VIRTUAL_CALL") {
         return type;
     } else {
         errorMismatch(-1);
