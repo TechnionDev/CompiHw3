@@ -36,7 +36,7 @@ const string &verifyRetTypeName(const string &type) {
 }
 
 const string &verifyVarTypeName(const string &type) {
-    if (verifyVarTypeName(type) != "VOID") {
+    if (verifyAllTypeNames(type) != "VOID") {
         return type;
     } else {
         errorMismatch(-1);
@@ -99,12 +99,12 @@ SymbolTable::SymbolTable() {
     this->nestedLoopDepth = 0;
     this->currOffset = 0;
     this->addScope();
-    this->addSymbol("print", NEW(IdC, ("print", "STRING")));
-    this->addSymbol("print", NEW(IdC, ("printi", "int")));
+    this->addSymbol("print", NEW(FuncIdC, ("print", "VOID", vector<string>({"STRING"}))));
+    this->addSymbol("printi", NEW(FuncIdC, ("printi", "VOID", vector<string>({"INT"}))));
 }
 
 void SymbolTable::addScope(int funcArgCount) {
-    if (not ((funcArgCount == 0 and  this->scopeStartOffsets.size() == 1) or (this->scopeStartOffsets.size() > 1 and funcArgCount != 0))) {
+    if (not((funcArgCount != 0 and this->scopeStartOffsets.size() == 1) or (this->scopeStartOffsets.size() > 1 and funcArgCount == 0) or this->scopeStartOffsets.size() == 0)) {
         throw "Code error. We should only add a scope of a function when we are in the global scope";
     }
     if (funcArgCount != 0) {
