@@ -1,5 +1,5 @@
 #include "stypes.hpp"
-#include <iostream> // TODO: Remove
+
 #include "hw3_output.hpp"
 
 using namespace output;
@@ -102,6 +102,8 @@ SymbolTable::SymbolTable() {
     this->addScope();
     this->addSymbol("print", NEW(FuncIdC, ("print", "VOID", vector<string>({"STRING"}))));
     this->addSymbol("printi", NEW(FuncIdC, ("printi", "VOID", vector<string>({"INT"}))));
+}
+SymbolTable::~SymbolTable() {
 }
 
 void SymbolTable::addScope(int funcArgCount) {
@@ -242,9 +244,17 @@ void verifyBoolType(shared_ptr<STypeC> exp) {
     }
 }
 
-void dummy() {
-    // TODO: Remove this function
-    std::cout << "dummy" << std::endl;
+void verifyMainExists(SymbolTable &symbolTable) {
+    auto token = yylex();
+    if (token) {
+    }
+    auto mainFunc = symbolTable.getFuncSymbol("main", false);
+
+    if (mainFunc == nullptr or mainFunc->getType() != "VOID" or mainFunc->getArgTypes().size() != 0) {
+        errorMainMissing();
+    }
+
+    symbolTable.removeScope();
 }
 
 }  // namespace hw3

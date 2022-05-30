@@ -98,6 +98,7 @@ class SymbolTable {
     shared_ptr<RetTypeNameC> retType;
     int nestedLoopDepth;
     SymbolTable();
+    ~SymbolTable();
     void addScope(int funcArgCount = 0);
     void removeScope();
     void addSymbol(const string &name, shared_ptr<IdC> type);
@@ -132,8 +133,7 @@ class StdType : public STypeC {
 bool isImpliedCastAllowed(shared_ptr<STypeC> rawExp1, shared_ptr<STypeC> rawExp2);
 bool areStrTypesCompatible(const string &typeStr1, const string &typeStr2);
 void verifyBoolType(shared_ptr<STypeC> exp);
-void dummy();
-
+void verifyMainExists(SymbolTable &symbolTable);
 }  // namespace hw3
 
 #define YYSTYPE hw3::STypePtr
