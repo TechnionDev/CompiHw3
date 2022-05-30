@@ -1,0 +1,3 @@
+void main(){
+    auto bb = "5";
+}

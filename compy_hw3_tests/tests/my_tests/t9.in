@@ -1,0 +1,5 @@
+bool foo( byte v,bool d){
+    bool a = not true;
+    auto dd = not (false);
+    return 1 > true;
+}

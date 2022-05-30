@@ -1,0 +1,7 @@
+kljsdf f() {
+    return "abc";
+}
+
+void main() {
+    return;
+}

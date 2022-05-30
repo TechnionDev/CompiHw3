@@ -1,0 +1,5 @@
+int a(){int d;}
+
+void main(){
+    int a = 5;
+}

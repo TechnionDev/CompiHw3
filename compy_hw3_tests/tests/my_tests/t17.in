@@ -1,0 +1,13 @@
+int a(){int f;}
+
+void main(){
+    auto c = true;
+    while(c){
+        continue;
+        break;
+        break;
+        continue;
+        break;
+        break;
+    }
+}
