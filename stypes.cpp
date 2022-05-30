@@ -1,8 +1,9 @@
 #include "stypes.hpp"
-
+#include <iostream> // TODO: Remove
 #include "hw3_output.hpp"
 
 using namespace output;
+using std::reverse;
 
 namespace hw3 {
 
@@ -12,7 +13,7 @@ const string &verifyAllTypeNames(const string &type) {
     if (type == "INT" or type == "BOOL" or type == "BYTE" or type == "VOID" or type == "STRING" or type == "BAD_VIRTUAL_CALL") {
         return type;
     } else {
-        errorMismatch(-1);
+        errorMismatch(yylineno);
         exit(1);
     }
 }
@@ -21,7 +22,7 @@ const string &verifyValTypeName(const string &type) {
     if (verifyAllTypeNames(type) != "VOID") {
         return type;
     } else {
-        errorMismatch(-1);
+        errorMismatch(yylineno);
         exit(1);
     }
 }
@@ -30,7 +31,7 @@ const string &verifyRetTypeName(const string &type) {
     if (verifyAllTypeNames(type) != "STRING") {
         return type;
     } else {
-        errorMismatch(-1);
+        errorMismatch(yylineno);
         exit(1);
     }
 }
@@ -39,7 +40,7 @@ const string &verifyVarTypeName(const string &type) {
     if (verifyAllTypeNames(type) != "VOID") {
         return type;
     } else {
-        errorMismatch(-1);
+        errorMismatch(yylineno);
         exit(1);
     }
 }
@@ -107,20 +108,37 @@ void SymbolTable::addScope(int funcArgCount) {
     if (not((funcArgCount >= 0 and this->scopeStartOffsets.size() == 1) or (this->scopeStartOffsets.size() > 1 and funcArgCount == 0) or this->scopeStartOffsets.size() == 0)) {
         throw "Code error. We should only add a scope of a function when we are in the global scope";
     }
-    if (funcArgCount != 0) {
-        this->currOffset -= funcArgCount;
-    }
     this->scopeSymbols.push_back(vector<string>());
     this->scopeStartOffsets.push_back(this->currOffset);
 }
 
 void SymbolTable::removeScope() {
     endScope();
-    // For each string in the last scope, remove it from the symbol table
+
+    string funcTypeStr;
+    shared_ptr<FuncIdC> funcId;
+    vector<string> argTypes;
+    // If we are going back into the global scope
+    if (this->scopeSymbols.size() == 2) {
+        this->currOffset = 0;
+        // For each string in the last scope, remove it from the symbol table
+        int offset = -1;
+        for (int i = this->formals.size() - 1; i >= 0; i--) {
+            printID(this->formals[i], offset--, this->symTbl[this->formals[i]]->getType());
+            this->symTbl.erase(this->formals[i]);
+        }
+        this->formals.clear();
+    } else {
+        this->currOffset -= this->scopeSymbols.back().size();
+    }
     int offset = this->scopeStartOffsets.back();
-    this->currOffset -= this->scopeSymbols.size();
     for (string s : this->scopeSymbols.back()) {
-        printID(s, offset++, this->symTbl[s]->getType());
+        if ((funcId = DC(FuncIdC, this->symTbl[s])) != nullptr) {
+            funcTypeStr = makeFunctionType(funcId->getType(), funcId->getArgTypes());
+            printID(s, offset, funcTypeStr);
+        } else {
+            printID(s, offset++, this->symTbl[s]->getType());
+        }
         this->symTbl.erase(s);
     }
 
@@ -132,12 +150,27 @@ const string &RetTypeNameC::getTypeName() const {
     return this->type;
 }
 
-void SymbolTable::addSymbol(string name, shared_ptr<IdC> type) {
+void SymbolTable::addFormal(shared_ptr<IdC> type) {
+    if (type == nullptr) {
+        throw "Can't add a nullptr formal to the symbol table";
+    }
+    if (this->symTbl[type->getName()] != nullptr) {
+        errorDef(yylineno, type->getName());
+    }
+    this->formals.push_back(type->getName());
+    this->symTbl[type->getName()] = type;
+}
+
+void SymbolTable::addSymbol(const string &name, shared_ptr<IdC> type) {
     // Check that the symbol doesn't exist in the scope yet
     if (type == nullptr) {
-        throw "Can't add a nullptr to the symbol table";
+        throw "Can't add a nullptr symbol to the symbol table";
     }
-    if (this->scopeSymbols.back().end() != find(this->scopeSymbols.back().begin(), this->scopeSymbols.back().end(), name)) {
+    if (type->getType() == "STRING") {
+        errorMismatch(yylineno);
+    }
+
+    if (this->symTbl[name] != nullptr) {
         errorDef(yylineno, name);
     }
     this->scopeSymbols.back().push_back(name);
@@ -179,24 +212,39 @@ void SymbolTable::printSymbolTable() {
     }
 }
 
-StringC::StringC(const char *str) : STypeC(STString), value(str) {}
-
-const string &StringC::getString() const {
-    return this->value;
-}
-
 // helper functions:
 
-bool isImpliedCastAllowed(STypeC rawExp1, STypeC rawExp2) {
+bool isImpliedCastAllowed(shared_ptr<STypeC> rawExp1, shared_ptr<STypeC> rawExp2) {
     auto exp1 = DC(ExpC, rawExp1);
     auto exp2 = DC(ExpC, rawExp2);
 
-    bool isExp1IntOrByte = exp1.isByte() || exp1.isInt();
-    bool isExp2IntOrByte = exp2.isByte() || exp2.isInt();
+    bool isExp1IntOrByte = exp1->isByte() or exp1->isInt();
+    bool isExp2IntOrByte = exp2->isByte() or exp2->isInt();
 
     bool canCastImplicitly = isExp1IntOrByte and isExp2IntOrByte;
 
     return canCastImplicitly;
+}
+
+bool areStrTypesCompatible(const string &typeStr1, const string &typeStr2) {
+    bool areEqual = typeStr1 == typeStr2;
+    bool areIntAndByte = typeStr1 == "INT" and typeStr2 == "BYTE";
+
+    bool canCastImplicitly = areEqual or areIntAndByte;
+
+    return canCastImplicitly;
+}
+
+void verifyBoolType(shared_ptr<STypeC> exp) {
+    auto expType = DC(ExpC, exp);
+    if (not expType->isBool()) {
+        errorMismatch(yylineno);
+    }
+}
+
+void dummy() {
+    // TODO: Remove this function
+    std::cout << "dummy" << std::endl;
 }
 
 }  // namespace hw3

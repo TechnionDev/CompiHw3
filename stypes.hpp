@@ -1,18 +1,18 @@
 #ifndef STYPES_H_
 #define STYPES_H_
+#include <algorithm>
 #include <map>
 #include <memory>
 #include <set>
 #include <string>
 #include <vector>
-#include <algorithm>
 
+using std::find;
 using std::map;
 using std::set;
 using std::shared_ptr;
 using std::string;
 using std::vector;
-using std::find;
 
 namespace hw3 {
 typedef enum {
@@ -90,6 +90,7 @@ class FuncIdC : public IdC {
 class SymbolTable {
     map<string, shared_ptr<IdC> > symTbl;
     vector<int> scopeStartOffsets;
+    vector<string> formals;
     vector<vector<string> > scopeSymbols;
     int currOffset;
 
@@ -99,7 +100,8 @@ class SymbolTable {
     SymbolTable();
     void addScope(int funcArgCount = 0);
     void removeScope();
-    void addSymbol(string name, shared_ptr<IdC> type);
+    void addSymbol(const string &name, shared_ptr<IdC> type);
+    void addFormal(shared_ptr<IdC> type);
     shared_ptr<IdC> getVarSymbol(const string &name);
     shared_ptr<FuncIdC> getFuncSymbol(const string &name, bool shouldError = true);
     void printSymbolTable();
@@ -112,14 +114,6 @@ class CallC : public STypeC {
    public:
     CallC(const string &type, const string &symbol);
     const string &getType() const;
-};
-
-class StringC : public STypeC {
-    string value;
-
-   public:
-    StringC(const char *str);
-    const string &getString() const;
 };
 
 template <typename T>
@@ -135,7 +129,10 @@ class StdType : public STypeC {
 };
 
 // helper functions:
-bool isImpliedCastAllowed(STypeC rawExp1, STypeC rawExp2);
+bool isImpliedCastAllowed(shared_ptr<STypeC> rawExp1, shared_ptr<STypeC> rawExp2);
+bool areStrTypesCompatible(const string &typeStr1, const string &typeStr2);
+void verifyBoolType(shared_ptr<STypeC> exp);
+void dummy();
 
 }  // namespace hw3
 
@@ -143,7 +140,6 @@ bool isImpliedCastAllowed(STypeC rawExp1, STypeC rawExp2);
 #define NEW(x, y) (std::shared_ptr<hw3::x>(new hw3::x y))
 #define NEWSTD(x) (std::shared_ptr<hw3::StdType<x> >(new hw3::StdType<x>(x())))
 #define NEWSTD_V(x, y) (std::shared_ptr<hw3::StdType<x> >(new hw3::StdType<x>(x y)))
-#define STYPE_TO_STR(x) (dynamic_pointer_cast<StringC>(x)->getString())
 #define STYPE2STD(t, x) (dynamic_pointer_cast<StdType<t> >(x)->getValue())
 #define DC(t, x) (dynamic_pointer_cast<hw3::t>(x))
 #define VECS(x) STYPE2STD(vector<string>, x)

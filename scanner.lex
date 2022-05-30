@@ -3,7 +3,10 @@
     #include <stdio.h>
     #include "stypes.hpp"
     #include "parser.tab.hpp"
+    #include "hw3_output.hpp"
+
     using namespace hw3;
+    using namespace output;
 
     char current_str[1025];
     int current_str_length = 0;
@@ -58,8 +61,8 @@ escapechars     ([\\"nrt0])
 (0{digit}+)                         error_unprintable_char(*yytext);
 (0|{nozerodigit}{digit}*)           {yylval = NEWSTD_V(std::string, (yytext)); return NUM;}
 (\"([^\n\r\"\\]|\\[rnt"\\])+\")     {return STRING;}
-
-.                                   return -1;
+(<<EOF>>)                           {seenEof = true;}
+.                                   {errorLex(yylineno);}
 %%
 
 void error_unclosed_string() {
