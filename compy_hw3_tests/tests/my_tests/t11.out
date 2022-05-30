@@ -1,0 +1,6 @@
+---end scope---
+---end scope---
+---end scope---
+v BYTE -1
+d BOOL -2
+line 9: variable foo is not defined

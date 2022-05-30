@@ -1,0 +1,44 @@
+---end scope---
+t INT 0
+t1 BYTE 1
+t2 INT 2
+t3 INT 3
+t4 BYTE 4
+t5 INT 5
+t6 BOOL 6
+t7 BOOL 7
+t8 BOOL 8
+t9 BOOL 9
+t10 BOOL 10
+t11 BOOL 11
+---end scope---
+t INT 0
+t1 BYTE 1
+t2 INT 2
+t3 INT 3
+t4 BYTE 4
+t5 INT 5
+t6 BOOL 6
+t7 BOOL 7
+t8 BOOL 8
+t9 BOOL 9
+t10 BOOL 10
+t11 BOOL 11
+---end scope---
+t INT 0
+t1 BYTE 1
+t2 INT 2
+t3 INT 3
+t4 BYTE 4
+t5 INT 5
+t6 BOOL 6
+t7 BOOL 7
+t8 BOOL 8
+t9 BOOL 9
+t10 BOOL 10
+t11 BOOL 11
+---end scope---
+---end scope---
+print (STRING)->VOID 0
+printi (INT)->VOID 0
+main ()->VOID 0

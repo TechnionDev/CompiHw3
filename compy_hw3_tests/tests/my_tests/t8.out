@@ -1,0 +1,6 @@
+---end scope---
+v BYTE -1
+d BOOL -2
+a BOOL 0
+dd BOOL 1
+line 8: type mismatch
