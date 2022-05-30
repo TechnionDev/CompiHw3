@@ -8,3 +8,6 @@ clean:
 	rm -f lex.yy.c
 	rm -f parser.tab.*pp
 	rm -f hw3
+
+zip: clean
+	zip hw3_sub.zip hw3 scanner.lex parser.ypp *.c *.cpp *.h *.hpp

@@ -3,7 +3,7 @@
 #include <iostream>
 #include <string>
 #include "hw3_output.hpp"
-#include "tokens.hpp"
+// #include "tokens.hpp"
 #include "stypes.hpp"
 
 #define GET_SYM(x) symbolTable.getVarSymbol(STYPE2STD(string, x))
@@ -23,7 +23,6 @@ using namespace hw3;
 using namespace std;
 
 hw3::SymbolTable symbolTable;
-bool seenEof = false;
 
 %}
 
@@ -44,7 +43,6 @@ bool seenEof = false;
 } */
 
 /* Declarations */
-%nonassoc MEOF
 %nonassoc VOID
 %nonassoc INT
 %nonassoc BYTE
@@ -79,20 +77,15 @@ bool seenEof = false;
 %left LBRACE
 %left RBRACE
 
+%nonassoc SECOND_PRIOR;
+%nonassoc FIRST_PRIOR;
+
 %%
 /* Rules */
-Program:        Funcs                               {
-                                                        auto mainFunc = symbolTable.getFuncSymbol("main", false);
-
-                                                        if (mainFunc == nullptr or mainFunc->getType() != "VOID" or mainFunc->getArgTypes().size() != 0) {
-                                                            errorMainMissing();
-                                                        }
-
-                                                        symbolTable.removeScope();
-                                                    }
+Program:        Funcs                               {}
                 ;
-Funcs:          /* epsilon */                       {}
-                | FuncDecl Funcs                    {};
+Funcs:          /* epsilon */ %empty %prec SECOND_PRIOR    {}
+                | FuncDecl Funcs %prec FIRST_PRIOR  {};
 FuncDecl:       RetType ID LPAREN Formals           {
                                                         auto formals = STYPE2STD(vector<shared_ptr<IdC> >, $4);
                                                         vector<string> argTypes;
@@ -117,7 +110,7 @@ FuncDecl:       RetType ID LPAREN Formals           {
 RetType:        Type                                {$$ = $1;}
                 | VOID                              {$$ = NEW(RetTypeNameC, ("VOID"));}
                 ;
-Formals:        /* Epsilon */                       {$$ = NEWSTD(vector<shared_ptr<IdC> >);}
+Formals:        /* Epsilon */%empty                 {$$ = NEWSTD(vector<shared_ptr<IdC> >);}
                 | FormalsList                       {$$ = $1;}
 ;
 FormalsList:    FormalDecl                          {
@@ -135,8 +128,8 @@ FormalDecl:     TypeDecl                            {$$ = $1;}
 Statements:     Statement                           {}
                 | Statements Statement              {}
                 ;
-OpenScope:      /* epsilon */ {symbolTable.addScope();};
-CloseScope:      /* epsilon */ {symbolTable.removeScope();};
+OpenScope:      /* epsilon */ %empty                {symbolTable.addScope();};
+CloseScope:      /* epsilon */ %empty               {symbolTable.removeScope();};
 Statement:      LBRACE OpenScope Statements RBRACE CloseScope
                 | TypeDecl SC                       {
                                                         auto symbol = DC(IdC, $1);
@@ -306,5 +299,6 @@ Exp:            LPAREN Exp RPAREN                   {$$ = $2;}
 /* User routines */
 int main() {
     yyparse();
+    verifyMainExists(symbolTable);
     return 0;
 }

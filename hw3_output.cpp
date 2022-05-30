@@ -1,4 +1,5 @@
 #include "hw3_output.hpp"
+#include "parser.tab.hpp"
 
 #include <stdlib.h>
 

@@ -10,5 +10,4 @@
   extern int yyleng;
 #endif
   extern int yylex();
-  extern bool seenEof;
 #endif /* TOKENS_HPP_ */
