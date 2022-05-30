@@ -5,12 +5,14 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <algorithm>
 
 using std::map;
 using std::set;
 using std::shared_ptr;
 using std::string;
 using std::vector;
+using std::find;
 
 namespace hw3 {
 typedef enum {

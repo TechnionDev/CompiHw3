@@ -92,7 +92,6 @@ Program:        Funcs                               {
 Funcs:          /* Epsilon */                       {}
                 | FuncDecl Funcs                    {};
 FuncDecl:       RetType ID LPAREN Formals           {
-                                                        // TODO: Add formals to symbol table
                                                         auto formals = STYPE2STD(vector<shared_ptr<IdC> >, $4);
                                                         vector<string> argTypes;
                                                         for (auto i = 0; i < formals.size(); i++) {
@@ -100,7 +99,6 @@ FuncDecl:       RetType ID LPAREN Formals           {
                                                         }
 
                                                         shared_ptr<FuncIdC> funcId(NEW(FuncIdC, (STYPE2STD(string, $2), DC(RetTypeNameC, $1)->getTypeName(), argTypes)));
-                                                        // TODO: Make sure the adding of functions doesn't increment the offset.
                                                         symbolTable.addSymbol(STYPE2STD(string, $2), funcId);
 
                                                         symbolTable.addScope(formals.size());
@@ -288,7 +286,7 @@ Exp:            LPAREN Exp RPAREN                   {$$ = $2;}
 
                                                         $$ = NEW(ExpC,("BOOL"));
                                                     }
-                | LPAREN Type RPAREN Exp            { /* TODO: Which casts are allowed */ }
+                | LPAREN Type RPAREN Exp            { /* TODO: Which casts are allowed - Answer: int to byte and byte to int */ }
                 ;
 %%
 

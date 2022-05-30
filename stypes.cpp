@@ -142,7 +142,10 @@ void SymbolTable::addSymbol(string name, shared_ptr<IdC> type) {
     }
     this->scopeSymbols.back().push_back(name);
     this->symTbl[name] = type;
-    this->currOffset++;
+
+    if (this->scopeStartOffsets.size() > 1) {
+        this->currOffset++;
+    }
 }
 
 shared_ptr<IdC> SymbolTable::getVarSymbol(const string &name) {
