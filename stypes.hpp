@@ -134,6 +134,9 @@ class StdType : public STypeC {
     // T &operator()() { return value; };
 };
 
+// helper functions:
+bool isImpliedCastAllowed(STypeC rawExp1, STypeC rawExp2);
+
 }  // namespace hw3
 
 #define YYSTYPE hw3::STypePtr
