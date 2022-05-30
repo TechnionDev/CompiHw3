@@ -188,8 +188,8 @@ const string &StringC::getString() const {
 // helper functions:
 
 bool isImpliedCastAllowed(STypeC rawExp1, STypeC rawExp2) {
-    ExpC exp1 = DC(ExpC, rawExp1);
-    ExpC exp2 = DC(ExpC, rawExp2);
+    auto exp1 = DC(ExpC, rawExp1);
+    auto exp2 = DC(ExpC, rawExp2);
 
     bool isExp1IntOrByte = exp1.isByte() || exp1.isInt();
     bool isExp2IntOrByte = exp2.isByte() || exp2.isInt();
