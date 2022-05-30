@@ -99,7 +99,7 @@ class SymbolTable {
     void removeScope();
     void addSymbol(string name, shared_ptr<IdC> type);
     shared_ptr<IdC> getVarSymbol(const string &name);
-    shared_ptr<FuncIdC> getFuncSymbol(const string &name, bool shouldError=true);
+    shared_ptr<FuncIdC> getFuncSymbol(const string &name, bool shouldError = true);
     void printSymbolTable();
 };
 

@@ -94,14 +94,19 @@ Funcs:          /* Epsilon */                       {}
 FuncDecl:       RetType ID LPAREN Formals           {
                                                         // TODO: Add formals to symbol table
                                                         auto formals = STYPE2STD(vector<shared_ptr<IdC> >, $4);
-                                                        symbolTable.addScope(formals.size());
                                                         vector<string> argTypes;
                                                         for (auto i = 0; i < formals.size(); i++) {
-                                                            symbolTable.addSymbol(formals[i]->getName(), formals[i]);
                                                             argTypes.push_back(formals[i]->getType());
                                                         }
+
                                                         shared_ptr<FuncIdC> funcId(NEW(FuncIdC, (STYPE2STD(string, $2), DC(RetTypeNameC, $1)->getTypeName(), argTypes)));
+                                                        // TODO: Make sure the adding of functions doesn't increment the offset.
                                                         symbolTable.addSymbol(STYPE2STD(string, $2), funcId);
+
+                                                        symbolTable.addScope(formals.size());
+                                                        for (auto i = 0; i < formals.size(); i++) {
+                                                            symbolTable.addSymbol(formals[i]->getName(), formals[i]);
+                                                        }
                                                     }
                     RPAREN LBRACE                   {
                                                         symbolTable.retType = DC(RetTypeNameC, $1);
@@ -237,7 +242,7 @@ Exp:            LPAREN Exp RPAREN                   {$$ = $2;}
                                                         }
                                                     }
                 | ID                                {$$ = NEW(ExpC,(GET_SYMTYPE($1)));}
-                | Call                              {$$ = NEW(ExpC,(DC(ExpC, $1)->getType()));}
+                | Call                              {$$ = NEW(ExpC,(DC(RetTypeNameC, $1)->getTypeName()));}
                 | NUM                               {$$ = NEW(ExpC,("INT"));}
                 | NUM B                             {
                                                         if (stoi(STYPE2STD(string, $1)) > 255) {

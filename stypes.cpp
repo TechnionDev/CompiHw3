@@ -104,7 +104,7 @@ SymbolTable::SymbolTable() {
 }
 
 void SymbolTable::addScope(int funcArgCount) {
-    if (not((funcArgCount != 0 and this->scopeStartOffsets.size() == 1) or (this->scopeStartOffsets.size() > 1 and funcArgCount == 0) or this->scopeStartOffsets.size() == 0)) {
+    if (not((funcArgCount >= 0 and this->scopeStartOffsets.size() == 1) or (this->scopeStartOffsets.size() > 1 and funcArgCount == 0) or this->scopeStartOffsets.size() == 0)) {
         throw "Code error. We should only add a scope of a function when we are in the global scope";
     }
     if (funcArgCount != 0) {
@@ -134,6 +134,9 @@ const string &RetTypeNameC::getTypeName() const {
 
 void SymbolTable::addSymbol(string name, shared_ptr<IdC> type) {
     // Check that the symbol doesn't exist in the scope yet
+    if (type == nullptr) {
+        throw "Can't add a nullptr to the symbol table";
+    }
     if (this->scopeSymbols.back().end() != find(this->scopeSymbols.back().begin(), this->scopeSymbols.back().end(), name)) {
         errorDef(yylineno, name);
     }
