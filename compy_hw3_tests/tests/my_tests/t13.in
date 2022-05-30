@@ -1,0 +1,4 @@
+void main(){
+    auto t = 5 * 5b;
+    auto t2 = t * true;
+}

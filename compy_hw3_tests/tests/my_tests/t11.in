@@ -1,0 +1,10 @@
+bool foo( byte v,bool d){
+    while(true){
+        continue;
+        break;
+    }
+}
+
+void main(){
+    foo = false;
+}

@@ -1,0 +1,4 @@
+//make sure start rule is used
+int a;
+
+void main(){int f;}
